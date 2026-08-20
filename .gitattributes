@@ -1,0 +1,16 @@
+# Normalise line endings in the repository to LF, regardless of the checkout platform.
+# Without this, a Windows checkout commits CRLF and every file looks modified to a
+# collaborator on macOS or Linux.
+* text=auto eol=lf
+
+# Windows-only shell scripts must keep CRLF to run correctly.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets: never touched.
+*.png binary
+*.jpg binary
+*.ico binary
+*.node binary
+*.db binary
