@@ -1,0 +1,44 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Dashboard", "x": 0, "y": 0, "w": 1180, "h": 820 },
+    { "file": "Habits.dc.html", "title": "Habits", "x": 1280, "y": 0, "w": 1180, "h": 820 },
+    { "file": "Calendar.dc.html", "title": "Calendar", "x": 2560, "y": 0, "w": 1180, "h": 820 },
+    { "file": "SyncStates.dc.html", "title": "Sync status · states", "x": 3840, "y": 0, "w": 1120, "h": 700 },
+    { "file": "Progress.dc.html", "title": "Progress", "x": 0, "y": 920, "w": 1180, "h": 820 },
+    { "file": "Achievements.dc.html", "title": "Achievements", "x": 1280, "y": 920, "w": 1180, "h": 820 },
+    { "file": "Settings.dc.html", "title": "Settings", "x": 2560, "y": 920, "w": 1180, "h": 820 },
+    { "file": "Leaderboard.dc.html", "title": "Leaderboard · Phase 3", "x": 0, "y": 1840, "w": 1180, "h": 820 },
+    { "file": "Challenges.dc.html", "title": "Challenges · Phase 3", "x": 1280, "y": 1840, "w": 1180, "h": 820 }
+  ],
+  "annotations": [
+    {
+      "id": "read-me",
+      "x": 0,
+      "y": -230,
+      "w": 460,
+      "text": "ADAPTIVE HABIT LEAGUE — UI\n\nNine artboards in the Progression direction. Every screen has a dark / light switch above it.\n\nThe data is consistent across all of them: Thursday 20 August, week 8, level 4 (Focused), Study AI and Coding ticked in Google, German mid-timer at 27 of 45 minutes."
+    },
+    {
+      "id": "calendar-note",
+      "x": 2560,
+      "y": -230,
+      "w": 460,
+      "text": "CALENDAR\n\nBlock heights are proportional to each habit's duration target — the view Google Calendar could not have given us, because a Google Task carries no time of day and no duration.\n\nThe app owns both, which is why the week grid can position and size a block at all."
+    },
+    {
+      "id": "sync-note",
+      "x": 3840,
+      "y": -230,
+      "w": 460,
+      "text": "SYNC STATUS\n\nThe status is a control, not a label: it states the connection, when it last ran and when it runs next, and opens the details panel on click.\n\nFour states map to real conditions in the sync service — connected, syncing, offline with queued changes, and needs_reauth, which is the 7-day token expiry the Testing consent screen causes."
+    },
+    {
+      "id": "phase3-note",
+      "x": -520,
+      "y": 1840,
+      "w": 420,
+      "text": "PHASE 3 PLACEHOLDERS\n\nLeaderboard and Challenges stay in the sidebar so the navigation matches the finished product, but they state plainly that they are not built yet and why — rather than showing invented friends and fake scores."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -1,0 +1,249 @@
+import { useState } from 'react'
+import type { DashboardCard } from '@shared/types'
+import Screen from '../components/Screen'
+import Icon from '../components/Icon'
+import { Bar, Button, Empty, Ring, Tier } from '../components/ui'
+import { useData, useTick } from '../hooks/useData'
+import { dayLabel, duration, STATUS_COLOR, STATUS_LABEL } from '../lib/format'
+
+/** Live elapsed minutes while a timer runs, so the card ticks upward. */
+function liveMinutes(card: DashboardCard): number {
+  if (!card.timerRunning || !card.timerStartedAt) return card.loggedMinutes
+  return card.loggedMinutes
+}
+
+function HabitRow({ card }: { card: DashboardCard }) {
+  const [busy, setBusy] = useState(false)
+  const minutes = liveMinutes(card)
+  const color = card.timerRunning ? 'var(--accent)' : STATUS_COLOR[card.status]
+  const done = card.status === 'complete'
+
+  const act = async (fn: () => Promise<unknown>): Promise<void> => {
+    setBusy(true)
+    try {
+      await fn()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        background: 'var(--panel)',
+        border: `1px solid ${card.timerRunning ? 'var(--accent)' : 'var(--line)'}`,
+        boxShadow: card.timerRunning
+          ? '0 0 0 1px var(--accent), 0 6px 22px -8px var(--accent)'
+          : 'none',
+        padding: '16px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 18,
+        minWidth: 0,
+        transition: 'border-color .2s ease, box-shadow .2s ease'
+      }}
+    >
+      <Ring percent={card.percent} color={color}>
+        <span className="num" style={{ fontSize: 17, color }}>
+          {card.percent}
+        </span>
+      </Ring>
+
+      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span
+            className="display"
+            style={{
+              fontSize: 18,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {card.name}
+          </span>
+          <Tier level={card.difficultyLevel} />
+          {card.origin === 'assumed' ? (
+            <span
+              title="Ticked in Google without a timer run — credited at target"
+              style={{
+                fontSize: 9,
+                letterSpacing: '0.08em',
+                color: 'var(--faint)',
+                border: '1px solid var(--line)',
+                padding: '1px 5px',
+                flexShrink: 0
+              }}
+            >
+              ASSUMED
+            </span>
+          ) : null}
+        </div>
+
+        <span
+          style={{
+            fontSize: 11,
+            color: 'var(--faint)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          {card.scheduledTime} · {duration(minutes)} of {duration(card.targetMinutes)} ·{' '}
+          {STATUS_LABEL[card.status]}
+        </span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Icon
+              name="flame"
+              size={12}
+              color={card.streak > 0 ? 'var(--gold)' : 'var(--faint)'}
+              strokeWidth={1.8}
+            />
+            <span
+              className="num"
+              style={{ fontSize: 12, color: card.streak > 0 ? 'var(--gold)' : 'var(--faint)' }}
+            >
+              {card.streak}
+            </span>
+          </span>
+          <span className="num" style={{ fontSize: 12, color: 'var(--accent)' }}>
+            +{card.xpReward} XP
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 7, flexShrink: 0 }}>
+        {!done ? (
+          <Button
+            kind={card.timerRunning ? 'solid' : 'ghost'}
+            disabled={busy}
+            title={card.timerRunning ? 'Stop the timer' : 'Start the timer'}
+            onClick={() =>
+              void act(() =>
+                card.timerRunning
+                  ? window.api.timer.stop(card.occurrenceId)
+                  : window.api.timer.start(card.occurrenceId)
+              )
+            }
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name={card.timerRunning ? 'stop' : 'play'} size={11} />
+              {card.timerRunning ? 'STOP' : 'START'}
+            </span>
+          </Button>
+        ) : null}
+
+        <Button
+          kind={done ? 'ghost' : 'solid'}
+          disabled={busy}
+          title={done ? 'Mark as not done' : 'Mark complete'}
+          onClick={() => void act(() => window.api.occurrence.setCompleted(card.occurrenceId, !done))}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="check" size={11} strokeWidth={2.4} />
+            {done ? 'UNDO' : 'DONE'}
+          </span>
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+export default function Dashboard() {
+  // Re-render each second so a running timer's minutes stay honest on screen.
+  useTick(1000)
+  const { data, loading } = useData(() => window.api.view.dashboard(), [])
+
+  if (loading && !data) return <Screen title="Today"><div /></Screen>
+  if (!data) return null
+
+  const level = data.level
+  const pct = Math.round(level.progress * 100)
+
+  return (
+    <Screen
+      title={dayLabel(data.date)}
+      subtitle={`Week ${data.weekNumber} · Day score ${data.dayPoints} / ${data.dayPointsMax}`}
+      actions={
+        <div style={{ flexGrow: 1, maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span className="label">
+              Level {level.level} → {level.level + 1}
+            </span>
+            <span className="num" style={{ fontSize: 12, color: 'var(--dim)' }}>
+              {level.xpToNext.toLocaleString()} XP TO GO
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 2, height: 8 }}>
+            {Array.from({ length: 20 }, (_, i) => (
+              <div
+                key={i}
+                style={{
+                  flexGrow: 1,
+                  background: i < Math.round(pct / 5) ? 'var(--accent)' : 'var(--panel2)',
+                  transition: 'background .3s ease'
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      }
+    >
+      {data.cards.length === 0 ? (
+        <Empty
+          title="Nothing scheduled today"
+          body="Create a habit and set which days it runs on. The app expands the schedule automatically and, once Google is connected, puts a matching task in your list each day."
+        />
+      ) : (
+        <div
+          style={{
+            padding: '20px 26px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(430px, 1fr))',
+            gap: 14,
+            alignContent: 'start'
+          }}
+        >
+          {data.cards.map((card) => (
+            <HabitRow key={card.occurrenceId} card={card} />
+          ))}
+
+          <div
+            style={{
+              background: 'var(--panel2)',
+              border: '1px dashed var(--line)',
+              padding: '16px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              gap: 9
+            }}
+          >
+            <span className="label">Today</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span className="num" style={{ fontSize: 26, color: 'var(--accent)' }}>
+                {data.dayPoints}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--faint)' }}>
+                of {data.dayPointsMax} points ·{' '}
+                {data.cards.filter((c) => c.status === 'complete').length} of {data.cards.length}{' '}
+                complete
+              </span>
+            </div>
+            <Bar
+              value={
+                data.dayPointsMax > 0
+                  ? (Math.max(0, data.dayPoints) / data.dayPointsMax) * 100
+                  : 0
+              }
+              color="var(--accent)"
+              height={3}
+            />
+          </div>
+        </div>
+      )}
+    </Screen>
+  )
+}

@@ -1,0 +1,31 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "A · Command Deck", "x": 0, "y": 0, "w": 1180, "h": 820 },
+    { "file": "TrainingLog.dc.html", "title": "B · Training Log", "x": 1280, "y": 0, "w": 1180, "h": 820 },
+    { "file": "Progression.dc.html", "title": "C · Progression", "x": 2560, "y": 0, "w": 1180, "h": 820 }
+  ],
+  "annotations": [
+    {
+      "id": "dir-a",
+      "x": 0,
+      "y": -186,
+      "w": 420,
+      "text": "A · COMMAND DECK\n\nDense and data-first. Every habit is one scannable row, and monospaced numerals line up so progress, streak and XP compare straight down the column. Best if you want the whole day readable in a single glance.\n\nTradeoff: reads like a professional instrument, not a reward. The least game-like of the three."
+    },
+    {
+      "id": "dir-b",
+      "x": 1280,
+      "y": -186,
+      "w": 420,
+      "text": "B · TRAINING LOG\n\nEditorial and calm. Serif display type, generous air, one large percentage per habit. Feels like a premium training journal — the improvement numbers get room to breathe, which suits the weekly review and progress screens.\n\nTradeoff: fewer habits fit on screen, and the game layer stays quiet."
+    },
+    {
+      "id": "dir-c",
+      "x": 2560,
+      "y": -186,
+      "w": 420,
+      "text": "C · PROGRESSION\n\nGame-system forward but adult. Rank badge, segmented XP track, progress rings, difficulty tiers, and a glow on whichever habit is currently running. The most motivating of the three on a normal day.\n\nTradeoff: the most visual machinery to maintain, and it can feel busy when the day is full."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

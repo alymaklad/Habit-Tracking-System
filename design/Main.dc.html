@@ -1,0 +1,212 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Space Grotesk', system-ui, sans-serif; }
+    a { color: oklch(0.80 0.14 195); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.12 195); }
+    * { box-sizing: border-box; }
+  </style>
+</helmet>
+
+<div style="{{themeVars}}; width: 1180px; height: 820px; display: flex; background: var(--bg); color: var(--fg); font-size: 13px; overflow: hidden;">
+
+  <div style="width: 196px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column;">
+    <div style="padding: 18px 16px 16px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase;">Adaptive</div>
+      <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">Habit League</div>
+    </div>
+
+    <div style="padding: 10px 8px; display: flex; flex-direction: column; gap: 1px; flex-grow: 1;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 3px; background: var(--panel2); color: var(--fg); border-left: 2px solid var(--accent);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span style="font-weight: 500;">Dashboard</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 3px; color: var(--dim); border-left: 2px solid transparent;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1.2 1.2L7.5 5"/><path d="M4 12l1.2 1.2L7.5 10"/><path d="M4 18l1.2 1.2L7.5 16"/></svg>
+        <span>Habits</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 3px; color: var(--dim); border-left: 2px solid transparent;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span>Calendar</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 3px; color: var(--dim); border-left: 2px solid transparent;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 20h18"/><path d="M6 20V11M11 20V5M16 20v-6M21 20v-9"/></svg>
+        <span>Progress</span>
+      </div>
+
+      <div style="height: 1px; background: var(--line); margin: 9px 10px;"></div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 3px; color: var(--faint); border-left: 2px solid transparent;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M10 20h4M12 14v6"/></svg>
+          <span>Leaderboard</span>
+        </div>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.06em; border: 1px solid var(--line); border-radius: 2px; padding: 1px 4px;">P3</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 3px; color: var(--dim); border-left: 2px solid transparent;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg>
+        <span>Achievements</span>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 3px; color: var(--faint); border-left: 2px solid transparent;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/></svg>
+          <span>Challenges</span>
+        </div>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.06em; border: 1px solid var(--line); border-radius: 2px; padding: 1px 4px;">P3</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 3px; color: var(--dim); border-left: 2px solid transparent;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4"/></svg>
+        <span>Settings</span>
+      </div>
+    </div>
+
+    <div style="padding: 12px 14px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px;">
+      <div style="width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex-shrink: 0;"></div>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 10.5px; color: var(--dim);">Google Tasks</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--faint);">synced 20:43</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <div style="height: 52px; flex-shrink: 0; border-bottom: 1px solid var(--line); background: var(--panel); display: flex; align-items: center; justify-content: space-between; padding: 0 20px;">
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Today</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--faint);">THU 20 AUG 2026</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 18px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--faint);">LVL</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--accent);">04</span>
+          <span style="font-size: 11.5px; color: var(--dim);">Focused</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; width: 168px;">
+          <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--faint);">
+            <span>2,340 XP</span><span>3,000</span>
+          </div>
+          <div style="height: 3px; background: var(--panel2); border-radius: 2px; overflow: hidden;">
+            <div style="width: 78%; height: 100%; background: var(--accent);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line); background: var(--bg);">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="5">
+        <div style="padding: 14px 18px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--faint); text-transform: uppercase;">{{s.label}}</span>
+          <div style="display: flex; align-items: baseline; gap: 6px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; color: {{s.color}};">{{s.value}}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--faint);">{{s.unit}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.7fr 0.75fr 2.1fr 0.55fr 0.6fr 0.85fr; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--faint); text-transform: uppercase;">
+      <span>Habit</span><span>Target</span><span>Progress</span><span style="text-align: right;">Streak</span><span style="text-align: right;">XP</span><span style="text-align: right;">Action</span>
+    </div>
+
+    <div style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <sc-for list="{{habits}}" as="h" hint-placeholder-count="5">
+        <div style="display: grid; grid-template-columns: 1.7fr 0.75fr 2.1fr 0.55fr 0.6fr 0.85fr; gap: 16px; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--line); background: {{h.rowBg}};">
+
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <div style="width: 3px; height: 26px; border-radius: 2px; background: {{h.color}}; flex-shrink: 0;"></div>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+              <span style="font-weight: 600; font-size: 13.5px; letter-spacing: -0.005em;">{{h.name}}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--faint);">{{h.meta}}</span>
+            </div>
+          </div>
+
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--dim);">{{h.target}}</span>
+
+          <div style="display: flex; align-items: center; gap: 11px;">
+            <div style="flex-grow: 1; height: 5px; background: var(--panel2); border-radius: 3px; overflow: hidden;">
+              <div style="width: {{h.pct}}%; height: 100%; background: {{h.color}}; border-radius: 3px;"></div>
+            </div>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; color: {{h.color}}; width: 34px; text-align: right;">{{h.pct}}%</span>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="{{h.flame}}" stroke-width="1.8"><path d="M12 3c.7 2.6 2.4 3.6 3.4 5.2A6 6 0 1 1 6 12c0-2.4 1.6-3.6 2.4-5.2.6 1 1.2 1.5 2 1.8C10.2 6.4 10.8 4.6 12 3Z"/></svg>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: {{h.flame}};">{{h.streak}}</span>
+          </div>
+
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--dim); text-align: right;">{{h.xp}}</span>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <div style="display: flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid {{h.btnLine}}; border-radius: 3px; background: {{h.btnBg}}; color: {{h.btnFg}};">
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; white-space: nowrap;">{{h.action}}</span>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="flex-grow: 1;"></div>
+
+      <div style="padding: 12px 20px; border-top: 1px solid var(--line); background: var(--panel); display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--faint); letter-spacing: 0.06em;">5 SCHEDULED &middot; 2 COMPLETE &middot; 1 ACTIVE</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--faint); letter-spacing: 0.06em;">NEXT SYNC 20:48</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark","section":"Theme"},"$preview":{"width":1180,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = (this.props.theme ?? 'dark') === 'dark';
+    const themeVars = dark
+      ? '--bg: oklch(0.15 0.008 250); --panel: oklch(0.19 0.010 250); --panel2: oklch(0.25 0.012 250); --line: oklch(0.28 0.012 250); --fg: oklch(0.93 0.006 250); --dim: oklch(0.70 0.012 250); --faint: oklch(0.55 0.012 250); --accent: oklch(0.80 0.14 195); --ok: oklch(0.78 0.15 155); --warn: oklch(0.82 0.14 80); --bad: oklch(0.70 0.16 25)'
+      : '--bg: oklch(0.975 0.003 250); --panel: oklch(1 0 0); --panel2: oklch(0.945 0.005 250); --line: oklch(0.90 0.006 250); --fg: oklch(0.26 0.010 250); --dim: oklch(0.50 0.012 250); --faint: oklch(0.63 0.010 250); --accent: oklch(0.55 0.12 195); --ok: oklch(0.56 0.13 155); --warn: oklch(0.62 0.13 80); --bad: oklch(0.55 0.17 25)';
+
+    const rowActive = dark ? 'oklch(0.21 0.012 250)' : 'oklch(0.965 0.006 250)';
+
+    const stats = [
+      { label: 'Today', value: '4', unit: '/ 8 pts', color: 'var(--accent)' },
+      { label: 'Logged', value: '4.1', unit: 'h', color: 'var(--fg)' },
+      { label: 'Completion', value: '62', unit: '%', color: 'var(--fg)' },
+      { label: 'Streak', value: '12', unit: 'days', color: 'var(--warn)' },
+      { label: 'Week', value: '+19', unit: '% vs last', color: 'var(--ok)' }
+    ];
+
+    const mk = (name, meta, target, pct, streak, xp, action, kind) => {
+      const color = kind === 'done' ? 'var(--ok)' : kind === 'active' ? 'var(--accent)' : 'var(--faint)';
+      return {
+        name: name, meta: meta, target: target, pct: pct, streak: streak, xp: xp, action: action, color: color,
+        flame: streak > 0 ? 'var(--warn)' : 'var(--faint)',
+        rowBg: kind === 'active' ? rowActive : 'transparent',
+        btnLine: kind === 'active' ? 'var(--accent)' : 'var(--line)',
+        btnBg: kind === 'active' ? 'var(--accent)' : 'transparent',
+        btnFg: kind === 'active' ? 'var(--bg)' : 'var(--dim)'
+      };
+    };
+
+    return {
+      themeVars: themeVars,
+      stats: stats,
+      habits: [
+        mk('Study AI', '18:00 · ticked in Google', '2h 00m', 100, 12, '+20', 'DONE', 'done'),
+        mk('Coding', '10:00 · ticked in Google', '2h 00m', 98, 8, '+20', 'DONE', 'done'),
+        mk('German', '20:00 · running 27m', '45m', 60, 4, '+15', 'STOP', 'active'),
+        mk('Exercise', '07:00 · not started', '1h 00m', 0, 0, '+20', 'START', 'idle'),
+        mk('Read', '22:30 · not started', '30m', 0, 15, '+10', 'START', 'idle')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
