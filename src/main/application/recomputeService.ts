@@ -122,6 +122,14 @@ export function recomputeService(deps: {
     const weekEnd = addDays(ws, 6)
     const daily = records.dailyInRange(ws, weekEnd)
 
+    // A week with nothing scheduled has no score to record. Writing a row of zeros
+    // would put empty weeks into the charts and the weekly review; clearing any stale
+    // row also keeps the history honest after habits are deleted.
+    if (daily.length === 0) {
+      records.deleteWeekly(ws)
+      return
+    }
+
     const totalMinutes = daily.reduce((s, d) => s + d.durationMinutes, 0)
     const targetMinutes = daily.reduce((s, d) => s + d.targetMinutes, 0)
     const xp = daily.reduce((s, d) => s + d.xp, 0)

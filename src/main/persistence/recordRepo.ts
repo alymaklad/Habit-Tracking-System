@@ -283,7 +283,14 @@ export function recordRepo(db: Db) {
 
     // ---------------------------------------------- personal records
 
+    deleteWeekly(weekStart: LocalDate): void {
+      db.prepare('DELETE FROM weekly_record WHERE week_start = ?').run(weekStart)
+    },
+
     putPersonalRecord(kind: string, value: number, display: string, on: LocalDate | null): void {
+      // Zero is not a record. Without this a fresh install shows "0 days" as your
+      // longest streak, which reads as a real figure rather than "nothing yet".
+      if (value <= 0) return
       db.prepare(
         `INSERT INTO personal_record (kind, value, display, achieved_on, updated_at)
          VALUES (?, ?, ?, ?, ?)

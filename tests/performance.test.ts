@@ -376,3 +376,35 @@ describe('navigating to another week', () => {
     expect(perf.basePoints).toBe(4)
   })
 })
+
+describe('a fresh database stays clean', () => {
+  it('writes no weekly rows and no personal records with nothing scheduled', () => {
+    // Exactly what happens on first launch: bootstrap expands an empty schedule and
+    // recomputes. Neither should leave derived rows behind.
+    h.schedule.expandHorizon(NOW)
+    h.engine.refresh('2026-08-01', '2026-09-30', NOW)
+
+    expect(h.records.weeklyAll(50)).toHaveLength(0)
+    expect(h.records.personalRecords()).toHaveLength(0)
+  })
+
+  it('never records a personal best of zero', () => {
+    h.records.putPersonalRecord('longest_streak', 0, '0 days', null)
+    expect(h.records.personalRecords()).toHaveLength(0)
+
+    h.records.putPersonalRecord('longest_streak', 3, '3 days', '2026-08-20')
+    expect(h.records.personalRecords()).toHaveLength(1)
+  })
+
+  it('clears a weekly row once its last habit is gone', () => {
+    const a = h.habits.create(draft())
+    complete(a.id, '2026-08-17')
+    refresh()
+    expect(h.records.weekly('2026-08-17')).not.toBeNull()
+
+    // Deleting the habit cascades its records away; the week should go with them.
+    h.habits.remove(a.id)
+    refresh()
+    expect(h.records.weekly('2026-08-17')).toBeNull()
+  })
+})
