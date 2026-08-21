@@ -9,6 +9,7 @@ import { recordRepo } from '@main/persistence/recordRepo'
 import { settingsRepo } from '@main/persistence/settingsRepo'
 import { scheduleService } from '@main/application/scheduleService'
 import { recomputeService } from '@main/application/recomputeService'
+import { viewService } from '@main/application/viewService'
 
 // Thursday 20 August 2026, 20:43 Cairo time.
 const NOW = new Date('2026-08-20T17:43:00.000Z')
@@ -391,5 +392,62 @@ describe('rebuild from source', () => {
     h.engine.rebuildAll(NOW)
 
     expect(JSON.stringify(h.records.dailyInRange('2026-08-19', '2026-08-27'))).toBe(before)
+  })
+})
+
+describe('live timer figures', () => {
+  it('reports settled minutes separately from a running timer', () => {
+    const habit = h.habits.create(draft())
+    h.schedule.expandHorizon(NOW)
+    const occ = h.occurrences.getByHabitDate(habit.id, TODAY)!
+
+    // 25 finished minutes, then a timer running for another 10.
+    h.logs.start(habit.id, occ.id, '2026-08-20T14:00:00.000Z')
+    h.logs.stop(occ.id, '2026-08-20T14:25:00.000Z')
+    h.logs.start(habit.id, occ.id, '2026-08-20T17:33:00.000Z')
+
+    const views = viewService({
+      habits: h.habits,
+      occurrences: h.occurrences,
+      logs: h.logs,
+      records: h.records,
+      settings: h.settings,
+      engine: h.engine,
+      runningOccurrenceId: () => occ.id
+    })
+
+    const card = views.dashboard(NOW).cards.find((c) => c.occurrenceId === occ.id)!
+    expect(card.timerRunning).toBe(true)
+    // 25 finished + 10 elapsed = 35 total, of which 25 are settled.
+    expect(card.loggedMinutes).toBe(35)
+    expect(card.closedMinutes).toBe(25)
+
+    // The UI adds elapsed time to the settled figure; doing so must not double-count.
+    const elapsed = Math.floor(
+      (NOW.getTime() - new Date(card.timerStartedAt!).getTime()) / 60000
+    )
+    expect(card.closedMinutes + elapsed).toBe(card.loggedMinutes)
+  })
+
+  it('leaves settled minutes equal to the total when no timer runs', () => {
+    const habit = h.habits.create(draft())
+    h.schedule.expandHorizon(NOW)
+    const occ = h.occurrences.getByHabitDate(habit.id, TODAY)!
+    h.logs.start(habit.id, occ.id, '2026-08-20T14:00:00.000Z')
+    h.logs.stop(occ.id, '2026-08-20T14:40:00.000Z')
+
+    const views = viewService({
+      habits: h.habits,
+      occurrences: h.occurrences,
+      logs: h.logs,
+      records: h.records,
+      settings: h.settings,
+      engine: h.engine,
+      runningOccurrenceId: () => null
+    })
+
+    const card = views.dashboard(NOW).cards.find((c) => c.occurrenceId === occ.id)!
+    expect(card.loggedMinutes).toBe(40)
+    expect(card.closedMinutes).toBe(40)
   })
 })

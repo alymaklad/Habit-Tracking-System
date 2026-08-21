@@ -36,7 +36,6 @@ export const SCOPE = SCOPES.join(' ')
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke'
-const USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v3/userinfo'
 
 const CONSENT_TIMEOUT_MS = 5 * 60_000
 
@@ -104,18 +103,16 @@ export function authService(deps: {
     })
   }
 
-  async function fetchAccount(accessToken: string): Promise<string | null> {
-    try {
-      const res = await fetch(USERINFO_ENDPOINT, {
-        headers: { authorization: `Bearer ${accessToken}` }
-      })
-      if (!res.ok) return null
-      const json = (await res.json()) as { email?: string }
-      return json.email ?? null
-    } catch {
-      return null
-    }
-  }
+  /**
+   * The account's email address is deliberately NOT available.
+   *
+   * Reading it needs an identity scope (`openid`/`email`), and asking for one purely to
+   * print a string on the Settings screen would widen the permission footprint for no
+   * functional gain. The UI says "Connected" instead of naming the account.
+   *
+   * This previously called the userinfo endpoint, which silently failed for exactly
+   * this reason and left the screen reading "Not connected" while connected.
+   */
 
   /** Runs the loopback listener and resolves with the code plus the exact redirect used. */
   function awaitAuthorizationCode(
@@ -253,11 +250,11 @@ export function authService(deps: {
         refreshToken: json.refresh_token,
         expiresAt: Date.now() + json.expires_in * 1000,
         scope: json.scope ?? SCOPE,
-        account: await fetchAccount(json.access_token)
+        account: null
       }
 
       vault.save(tokens)
-      sync.log('info', `Connected to Google as ${tokens.account ?? 'an unknown account'}`)
+      sync.log('info', 'Connected to Google')
       return tokens
     },
 

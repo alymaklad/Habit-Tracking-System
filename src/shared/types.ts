@@ -175,6 +175,8 @@ export interface DashboardCard {
   scheduledTime: LocalTime
   targetMinutes: number
   loggedMinutes: number
+  /** Minutes from FINISHED logs only, excluding any timer still running. */
+  closedMinutes: number
   percent: number
   status: OccurrenceStatus
   origin: TimeLogOrigin | null
@@ -266,6 +268,8 @@ export interface AppSettings {
   notifyStreak: boolean
   notifyWeeklyReview: boolean
   defaultReminderLeadMinutes: number
+  /** Points to aim for each week. 0 means no target has been set yet. */
+  weeklyPointsTarget: number
   /** Which channels each notification kind may use. */
   channels: NotificationChannel[]
   /** Mirror occurrences into the app's own Google calendar for mobile reminders. */
@@ -355,6 +359,16 @@ export interface PerformanceHabit {
   trend: number | null
 }
 
+export interface WeekVerdict {
+  weekStart: LocalDate
+  weekNumber: number
+  points: number
+  target: number
+  met: boolean
+  /** The week still in progress cannot have failed yet. */
+  inProgress: boolean
+}
+
 export interface PerformanceView {
   weekStart: LocalDate
   weekNumber: number
@@ -377,6 +391,20 @@ export interface PerformanceView {
   habits: PerformanceHabit[]
   best: PerformanceHabit | null
   weakest: PerformanceHabit | null
+
+  /** Points aimed for this week. 0 when no target is set. */
+  weeklyTarget: number
+  /** What the target would be if every scheduled occurrence were completed. */
+  suggestedTarget: number
+  targetMet: boolean
+  /** Points still needed; 0 once the target is met. */
+  pointsToTarget: number
+  /** 0–1 toward the target, capped at 1. */
+  targetProgress: number
+  /** Recent weeks judged against the target, oldest first. */
+  recentWeeks: WeekVerdict[]
+  /** Consecutive completed weeks that met the target, most recent backwards. */
+  targetStreak: number
 
   /** Six-week grid covering the selected month, for the points heatmap. */
   monthAnchor: LocalDate

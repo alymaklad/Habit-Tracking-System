@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifyStreak: true,
   notifyWeeklyReview: true,
   defaultReminderLeadMinutes: 30,
+  weeklyPointsTarget: 0,
   channels: ['toast', 'calendar'],
   calendarMirrorEnabled: true,
   push: { enabled: false, server: 'https://ntfy.sh', topic: '' },

@@ -10,6 +10,7 @@ import type {
   PerformanceHabit,
   PerformanceView,
   PersonalRecordView,
+  WeekVerdict,
   ProgressView,
   SeriesPoint,
   WeeklyReview
@@ -51,6 +52,17 @@ export function viewService(deps: {
     return todayIn(settings.timezone(), now)
   }
 
+  /**
+   * Minutes excluding a running timer. `totalFor` counts a live timer's elapsed time up
+   * to `now`, so subtracting that portion leaves a settled figure the UI can add to
+   * second by second — otherwise the card would sit frozen between fetches.
+   */
+  function closedMinutes(total: number, startedAt: string | null, now: Date): number {
+    if (!startedAt) return total
+    const elapsed = Math.max(0, Math.floor((now.getTime() - new Date(startedAt).getTime()) / 60000))
+    return Math.max(0, total - elapsed)
+  }
+
   // ------------------------------------------------------------ dashboard
 
   function dashboard(now: Date = new Date()): DashboardView {
@@ -72,6 +84,7 @@ export function viewService(deps: {
         scheduledTime: occ.scheduledTime,
         targetMinutes: occ.targetMinutes,
         loggedMinutes: logged.minutes,
+        closedMinutes: closedMinutes(logged.minutes, timer?.startedAt ?? null, now),
         percent:
           occ.targetMinutes > 0
             ? Math.min(100, Math.round((logged.minutes / occ.targetMinutes) * 100))
@@ -337,6 +350,52 @@ export function viewService(deps: {
     )
     const rated = ranked.filter((h) => h.scheduled > 0)
 
+    // --- weekly points target ---------------------------------------------
+    const cfg = settings.scoring()
+    const weeklyTarget = Math.max(0, settings.all().weeklyPointsTarget)
+
+    // A sensible target to propose: every scheduled occurrence this week completed.
+    const scheduledThisWeek = days.reduce((s, d) => s + d.scheduled, 0)
+    const suggestedTarget = Math.max(1, scheduledThisWeek * cfg.fullCompletion)
+
+    const targetMet = weeklyTarget > 0 && totalPoints >= weeklyTarget
+    const pointsToTarget = weeklyTarget > 0 ? Math.max(0, weeklyTarget - totalPoints) : 0
+    const targetProgress =
+      weeklyTarget > 0 ? Math.min(1, Math.max(0, totalPoints / weeklyTarget)) : 0
+
+    // Judge the last eight weeks against the CURRENT target. History is re-evaluated
+    // rather than frozen, matching how changing the scoring values re-prices past
+    // weeks — one target, applied consistently.
+    const thisWeekStart = weekStart(today)
+    const recentWeeks: WeekVerdict[] = []
+    for (let i = 7; i >= 0; i--) {
+      const start = addDays(ws, -7 * i)
+      const rec = records.weekly(start)
+      if (!rec && start !== ws) continue
+      const points = rec?.totalPoints ?? (start === ws ? totalPoints : 0)
+      const inProgress = start >= thisWeekStart
+      recentWeeks.push({
+        weekStart: start,
+        weekNumber: isoWeekNumber(start),
+        points,
+        target: weeklyTarget,
+        met: weeklyTarget > 0 && points >= weeklyTarget,
+        inProgress
+      })
+    }
+
+    // Count back through COMPLETED weeks only: the current week is still winnable, so
+    // it must not break a run before it has had a chance to finish.
+    let targetStreak = 0
+    if (weeklyTarget > 0) {
+      for (let i = recentWeeks.length - 1; i >= 0; i--) {
+        const w = recentWeeks[i]!
+        if (w.inProgress) continue
+        if (w.met) targetStreak++
+        else break
+      }
+    }
+
     // Month grid: pad back to Monday so the heatmap lines up with weekday columns.
     const monthAnchor = anchor ?? today
     const first = monthStart(monthAnchor)
@@ -361,6 +420,13 @@ export function viewService(deps: {
       habits: ranked,
       best: rated[0] ?? null,
       weakest: rated.length > 1 ? (rated[rated.length - 1] ?? null) : null,
+      weeklyTarget,
+      suggestedTarget,
+      targetMet,
+      pointsToTarget,
+      targetProgress,
+      recentWeeks,
+      targetStreak,
       monthAnchor,
       monthGrid,
       monthPoints,

@@ -6,17 +6,27 @@ import { Bar, Button, Empty, ErrorState, Loading, Ring, Tier } from '../componen
 import { useData, useTick } from '../hooks/useData'
 import { dayLabel, duration, STATUS_COLOR, STATUS_LABEL } from '../lib/format'
 
-/** Live elapsed minutes while a timer runs, so the card ticks upward. */
-function liveMinutes(card: DashboardCard): number {
+/**
+ * Live elapsed minutes while a timer runs, so the card ticks upward between fetches.
+ *
+ * `loggedMinutes` is only accurate as of the moment it was fetched. Adding the time
+ * since the timer started to the SETTLED minutes keeps the figure moving every second
+ * without double-counting the elapsed portion the server already included.
+ */
+function liveMinutes(card: DashboardCard, now: number): number {
   if (!card.timerRunning || !card.timerStartedAt) return card.loggedMinutes
-  return card.loggedMinutes
+  const elapsed = Math.max(0, Math.floor((now - new Date(card.timerStartedAt).getTime()) / 60000))
+  return card.closedMinutes + elapsed
 }
 
-function HabitRow({ card }: { card: DashboardCard }) {
+function HabitRow({ card, now }: { card: DashboardCard; now: number }) {
   const [busy, setBusy] = useState(false)
-  const minutes = liveMinutes(card)
+  const minutes = liveMinutes(card, now)
   const color = card.timerRunning ? 'var(--accent)' : STATUS_COLOR[card.status]
   const done = card.status === 'complete'
+  // The percentage follows the live figure too, so the ring fills as the timer runs.
+  const percent =
+    card.targetMinutes > 0 ? Math.min(100, Math.round((minutes / card.targetMinutes) * 100)) : 0
 
   const act = async (fn: () => Promise<unknown>): Promise<void> => {
     setBusy(true)
@@ -43,9 +53,9 @@ function HabitRow({ card }: { card: DashboardCard }) {
         transition: 'border-color .2s ease, box-shadow .2s ease'
       }}
     >
-      <Ring percent={card.percent} color={color}>
+      <Ring percent={percent} color={color}>
         <span className="num" style={{ fontSize: 17, color }}>
-          {card.percent}
+          {percent}
         </span>
       </Ring>
 
@@ -154,6 +164,7 @@ function HabitRow({ card }: { card: DashboardCard }) {
 export default function Dashboard() {
   // Re-render each second so a running timer's minutes stay honest on screen.
   useTick(1000)
+  const now = Date.now()
   const { data, error, loading, refetch } = useData(() => window.api.view.dashboard(), [])
 
   if (error) return (<Screen title="Today"><ErrorState message={error} onRetry={refetch} /></Screen>)
@@ -208,7 +219,7 @@ export default function Dashboard() {
           }}
         >
           {data.cards.map((card) => (
-            <HabitRow key={card.occurrenceId} card={card} />
+            <HabitRow key={card.occurrenceId} card={card} now={now} />
           ))}
 
           <div

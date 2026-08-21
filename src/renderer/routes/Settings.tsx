@@ -197,9 +197,11 @@ export default function Settings({
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                  <span style={{ fontSize: 13 }}>{status?.account ?? 'Not connected'}</span>
+                  <span style={{ fontSize: 13 }}>
+                    {status?.account ?? (connected ? 'Connected' : 'Not connected')}
+                  </span>
                   <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>
-                    {status?.tasklistName ? `Task list "${status.tasklistName}"` : 'Google Tasks'}
+                    {status?.tasklistName ? `Google Tasks · list "${status.tasklistName}"` : 'Google Tasks'}
                   </span>
                 </div>
                 {connected ? (
@@ -409,6 +411,15 @@ export default function Settings({
         {/* ------------------------------------------------ scoring */}
         <Card style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           <CardTitle>Scoring</CardTitle>
+          <Row title="Weekly points target" hint="0 turns the target off. Also editable on the Performance tab.">
+            <input
+              type="number"
+              min={0}
+              value={local.weeklyPointsTarget}
+              onChange={(e) => void save({ weeklyPointsTarget: Number(e.target.value) })}
+              style={{ width: 80 }}
+            />
+          </Row>
           {SCORING_ROWS.map(([key, label], i) => (
             <div
               key={key}

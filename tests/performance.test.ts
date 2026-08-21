@@ -408,3 +408,87 @@ describe('a fresh database stays clean', () => {
     expect(h.records.weekly('2026-08-17')).toBeNull()
   })
 })
+
+describe('weekly points target', () => {
+  it('reports no target until one is set, and suggests a sensible one', () => {
+    const a = h.habits.create(draft())
+    complete(a.id, '2026-08-17')
+    refresh()
+
+    const perf = h.views.performance(undefined, NOW)
+    expect(perf.weeklyTarget).toBe(0)
+    expect(perf.targetMet).toBe(false)
+    // Suggestion = every scheduled occurrence completed, at +2 each.
+    expect(perf.suggestedTarget).toBeGreaterThan(0)
+  })
+
+  it('tracks progress toward the target', () => {
+    const a = h.habits.create(draft())
+    complete(a.id, '2026-08-17')
+    complete(a.id, '2026-08-18')
+    refresh()
+    h.settings.save({ weeklyPointsTarget: 10 })
+
+    const perf = h.views.performance(undefined, NOW)
+    expect(perf.weeklyTarget).toBe(10)
+    expect(perf.targetMet).toBe(perf.totalPoints >= 10)
+    expect(perf.pointsToTarget).toBe(Math.max(0, 10 - perf.totalPoints))
+    expect(perf.targetProgress).toBeCloseTo(Math.min(1, perf.totalPoints / 10), 5)
+  })
+
+  it('marks the target met once the points land', () => {
+    const a = h.habits.create(draft())
+    for (const d of ['2026-08-17', '2026-08-18', '2026-08-19']) complete(a.id, d)
+    refresh()
+    h.settings.save({ weeklyPointsTarget: 3 })
+
+    const perf = h.views.performance(undefined, NOW)
+    expect(perf.targetMet).toBe(true)
+    expect(perf.pointsToTarget).toBe(0)
+    expect(perf.targetProgress).toBe(1)
+  })
+
+  it('judges each recent week and marks the current one in progress', () => {
+    const a = h.habits.create(draft())
+    complete(a.id, '2026-08-10')
+    complete(a.id, '2026-08-11')
+    complete(a.id, '2026-08-17')
+    refresh()
+    h.settings.save({ weeklyPointsTarget: 3 })
+
+    const perf = h.views.performance(undefined, NOW)
+    const current = perf.recentWeeks.find((w) => w.weekStart === '2026-08-17')!
+    const previous = perf.recentWeeks.find((w) => w.weekStart === '2026-08-10')
+
+    expect(current.inProgress).toBe(true)
+    if (previous) expect(previous.inProgress).toBe(false)
+    expect(perf.recentWeeks.every((w) => w.target === 3)).toBe(true)
+  })
+
+  it('does not let the unfinished current week break the streak', () => {
+    const a = h.habits.create(draft())
+    // A completed previous week that met the target.
+    for (const d of ['2026-08-10', '2026-08-11', '2026-08-12']) complete(a.id, d)
+    // The current week has barely started.
+    refresh()
+    h.settings.save({ weeklyPointsTarget: 5 })
+
+    const perf = h.views.performance(undefined, NOW)
+    // The current week is still winnable, so it is skipped rather than counted a miss.
+    expect(perf.targetStreak).toBeGreaterThanOrEqual(1)
+  })
+
+  it('turns the target off again when set to zero', () => {
+    const a = h.habits.create(draft())
+    complete(a.id, '2026-08-17')
+    refresh()
+    h.settings.save({ weeklyPointsTarget: 5 })
+    expect(h.views.performance(undefined, NOW).weeklyTarget).toBe(5)
+
+    h.settings.save({ weeklyPointsTarget: 0 })
+    const off = h.views.performance(undefined, NOW)
+    expect(off.weeklyTarget).toBe(0)
+    expect(off.targetMet).toBe(false)
+    expect(off.targetStreak).toBe(0)
+  })
+})

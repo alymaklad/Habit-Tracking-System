@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PerformanceDay, PerformanceHabit } from '@shared/types'
+import type { PerformanceDay, PerformanceHabit, PerformanceView } from '@shared/types'
 import Screen from '../components/Screen'
 import Icon from '../components/Icon'
 import { Bar, Button, Card, CardTitle, Empty, ErrorState, Label, Loading, Tier } from '../components/ui'
@@ -247,6 +247,166 @@ function MonthHeatmap({ grid, peak }: { grid: PerformanceDay[]; peak: number }) 
   )
 }
 
+/**
+ * The weekly points target and the record of whether it was met.
+ *
+ * Past weeks are judged against the CURRENT target rather than one frozen per week —
+ * the same principle as the scoring values, where changing a number re-prices history
+ * so every week is measured on one consistent yardstick.
+ */
+function TargetCard({ data, onChanged }: { data: PerformanceView; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(data.weeklyTarget || data.suggestedTarget))
+
+  const save = async (value: number): Promise<void> => {
+    await window.api.settings.save({ weeklyPointsTarget: Math.max(0, Math.round(value)) })
+    setEditing(false)
+    onChanged()
+  }
+
+  if (data.weeklyTarget === 0 && !editing) {
+    return (
+      <Card style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 200 }}>
+          <CardTitle>No weekly target set</CardTitle>
+          <span style={{ fontSize: 11.5, color: 'var(--dim)', textWrap: 'pretty' }}>
+            Completing everything scheduled this week would score{' '}
+            <span className="num" style={{ color: 'var(--accent)' }}>
+              {data.suggestedTarget}
+            </span>{' '}
+            points. Aiming slightly under that leaves room for one bad day.
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button onClick={() => setEditing(true)}>SET MY OWN</Button>
+          <Button kind="solid" onClick={() => void save(data.suggestedTarget)}>
+            USE {data.suggestedTarget}
+          </Button>
+        </div>
+      </Card>
+    )
+  }
+
+  const met = data.targetMet
+  const accent = met ? 'var(--ok)' : 'var(--accent)'
+
+  return (
+    <Card accent={met ? 'var(--ok)' : 'var(--line)'} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <CardTitle>Weekly target</CardTitle>
+          {met ? (
+            <span
+              className="display"
+              style={{
+                fontSize: 10,
+                letterSpacing: '0.12em',
+                color: 'var(--ok)',
+                border: '1px solid var(--ok)',
+                padding: '2px 8px'
+              }}
+            >
+              ACHIEVED
+            </span>
+          ) : (
+            <span style={{ fontSize: 11.5, color: 'var(--dim)' }}>
+              {data.pointsToTarget} more to go
+            </span>
+          )}
+        </div>
+
+        {editing ? (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="number"
+              min={0}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              style={{ width: 90 }}
+            />
+            <Button kind="solid" onClick={() => void save(Number(draft))}>
+              SAVE
+            </Button>
+            <Button onClick={() => setEditing(false)}>CANCEL</Button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
+            <span className="num" style={{ fontSize: 24, color: accent }}>
+              {data.totalPoints}
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--faint)' }}>of {data.weeklyTarget}</span>
+            <Button
+              onClick={() => {
+                setDraft(String(data.weeklyTarget))
+                setEditing(true)
+              }}
+            >
+              CHANGE
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <Bar value={data.targetProgress * 100} color={accent} height={6} />
+
+      {data.recentWeeks.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <Label>Week by week</Label>
+            {data.targetStreak > 0 ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Icon name="flame" size={12} color="var(--gold)" strokeWidth={1.8} />
+                <span className="num" style={{ fontSize: 12, color: 'var(--gold)' }}>
+                  {data.targetStreak} week{data.targetStreak === 1 ? '' : 's'} in a row
+                </span>
+              </span>
+            ) : null}
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {data.recentWeeks.map((w) => {
+              const colour = w.inProgress
+                ? 'var(--accent)'
+                : w.met
+                  ? 'var(--ok)'
+                  : 'var(--bad)'
+              return (
+                <div
+                  key={w.weekStart}
+                  title={`Week ${w.weekNumber} · ${w.points} of ${w.target} points · ${
+                    w.inProgress ? 'in progress' : w.met ? 'met' : 'missed'
+                  }`}
+                  style={{
+                    flexGrow: 1,
+                    minWidth: 52,
+                    padding: '7px 4px',
+                    textAlign: 'center',
+                    border: `1px solid ${colour}`,
+                    background: w.inProgress
+                      ? 'transparent'
+                      : `color-mix(in oklab, ${colour} 18%, transparent)`,
+                    borderStyle: w.inProgress ? 'dashed' : 'solid',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2
+                  }}
+                >
+                  <span className="num" style={{ fontSize: 13, color: colour }}>
+                    {w.points}
+                  </span>
+                  <span style={{ fontSize: 9, letterSpacing: '0.06em', color: 'var(--faint)' }}>
+                    W{w.weekNumber}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
+    </Card>
+  )
+}
+
 export default function Performance() {
   const [anchor, setAnchor] = useState(() => toLocalDate(new Date()))
   const { data, error, loading, refetch } = useData(
@@ -310,6 +470,9 @@ export default function Performance() {
       }
     >
       <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* ------------------------------------------------ weekly target */}
+        <TargetCard data={data} onChanged={refetch} />
+
         {/* ---------------------------------------------- headline totals */}
         <div
           style={{
