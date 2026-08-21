@@ -19,14 +19,49 @@ function liveMinutes(card: DashboardCard, now: number): number {
   return card.closedMinutes + elapsed
 }
 
+/**
+ * Elapsed seconds on the running timer.
+ *
+ * Minutes alone are not enough feedback: at minute granularity the card sits
+ * completely still for the first 60 seconds after you press Start, which reads as a
+ * dead button. The seconds readout moves immediately.
+ */
+function liveSeconds(card: DashboardCard, now: number): number {
+  if (!card.timerRunning || !card.timerStartedAt) return 0
+  const elapsed = Math.max(0, Math.floor((now - new Date(card.timerStartedAt).getTime()) / 1000))
+  return card.closedMinutes * 60 + elapsed
+}
+
+function clockLabel(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  const pad = (n: number): string => String(n).padStart(2, '0')
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
+}
+
 function HabitRow({ card, now }: { card: DashboardCard; now: number }) {
   const [busy, setBusy] = useState(false)
   const minutes = liveMinutes(card, now)
+  const seconds = liveSeconds(card, now)
   const color = card.timerRunning ? 'var(--accent)' : STATUS_COLOR[card.status]
   const done = card.status === 'complete'
-  // The percentage follows the live figure too, so the ring fills as the timer runs.
+
+  // While running, drive the ring from SECONDS so it creeps up continuously instead of
+  // jumping once a minute.
   const percent =
-    card.targetMinutes > 0 ? Math.min(100, Math.round((minutes / card.targetMinutes) * 100)) : 0
+    card.targetMinutes > 0
+      ? Math.min(
+          100,
+          Math.round(
+            ((card.timerRunning ? seconds / 60 : minutes) / card.targetMinutes) * 100
+          )
+        )
+      : 0
+
+  // A running timer is its own status. Showing the stored status here meant the card
+  // read "Not started" for the entire first quarter of a session.
+  const statusLabel = card.timerRunning ? 'Running' : STATUS_LABEL[card.status]
 
   const act = async (fn: () => Promise<unknown>): Promise<void> => {
     setBusy(true)
@@ -99,8 +134,8 @@ function HabitRow({ card, now }: { card: DashboardCard; now: number }) {
             textOverflow: 'ellipsis'
           }}
         >
-          {card.scheduledTime} · {duration(minutes)} of {duration(card.targetMinutes)} ·{' '}
-          {STATUS_LABEL[card.status]}
+          {card.scheduledTime} · {card.timerRunning ? clockLabel(seconds) : duration(minutes)} of{' '}
+          {duration(card.targetMinutes)} · {statusLabel}
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -140,7 +175,7 @@ function HabitRow({ card, now }: { card: DashboardCard; now: number }) {
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Icon name={card.timerRunning ? 'stop' : 'play'} size={11} />
-              {card.timerRunning ? 'STOP' : 'START'}
+              {card.timerRunning ? clockLabel(seconds) : 'START'}
             </span>
           </Button>
         ) : null}
