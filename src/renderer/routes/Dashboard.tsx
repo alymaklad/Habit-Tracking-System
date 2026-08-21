@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { DashboardCard } from '@shared/types'
 import Screen from '../components/Screen'
 import Icon from '../components/Icon'
-import { Bar, Button, Empty, Ring, Tier } from '../components/ui'
+import { Bar, Button, Empty, ErrorState, Loading, Ring, Tier } from '../components/ui'
 import { useData, useTick } from '../hooks/useData'
 import { dayLabel, duration, STATUS_COLOR, STATUS_LABEL } from '../lib/format'
 
@@ -154,9 +154,10 @@ function HabitRow({ card }: { card: DashboardCard }) {
 export default function Dashboard() {
   // Re-render each second so a running timer's minutes stay honest on screen.
   useTick(1000)
-  const { data, loading } = useData(() => window.api.view.dashboard(), [])
+  const { data, error, loading, refetch } = useData(() => window.api.view.dashboard(), [])
 
-  if (loading && !data) return <Screen title="Today"><div /></Screen>
+  if (error) return (<Screen title="Today"><ErrorState message={error} onRetry={refetch} /></Screen>)
+  if (loading && !data) return (<Screen title="Today"><Loading /></Screen>)
   if (!data) return null
 
   const level = data.level

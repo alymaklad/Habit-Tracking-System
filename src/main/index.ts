@@ -267,6 +267,34 @@ app.whenReady().then(() => {
   })
 
   ctx.bootstrap()
+
+  // Under the self-check, seed a habit and complete it so every screen renders its
+  // POPULATED state. Without this the check only ever exercised empty states, which is
+  // how a screen could pass while being blank with real data. The profile is a
+  // throwaway directory, so nothing here touches a real database.
+  if (process.env.AHL_UI_CHECK) {
+    try {
+      ctx.habits.create({
+        name: 'Check Habit',
+        description: null,
+        notes: null,
+        recurrence: { kind: 'weekly', days: [1, 2, 3, 4, 5, 6, 7] },
+        scheduledTime: '09:00',
+        targetMinutes: 60,
+        baselineMinutes: 60,
+        difficultyLevel: 2,
+        reminderLeadMinutes: 30,
+        colorKey: 'violet',
+        googleTasklistId: null,
+        active: true
+      })
+      const card = ctx.views.dashboard().cards[0]
+      if (card) ctx.habits.setCompleted(card.occurrenceId, true)
+    } catch (err) {
+      console.error(`[ui-check] seeding failed: ${String(err)}`)
+    }
+  }
+
   registerIpc(ctx, () => {
     send(PUSH_CHANNELS.dashboard)
     updateTray()

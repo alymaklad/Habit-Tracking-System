@@ -1,6 +1,6 @@
 import type { SeriesPoint } from '@shared/types'
 import Screen from '../components/Screen'
-import { Button, Card, CardTitle, Empty, Label } from '../components/ui'
+import { Button, Card, CardTitle, Empty, ErrorState, Label, Loading } from '../components/ui'
 import { useData } from '../hooks/useData'
 import { duration } from '../lib/format'
 
@@ -70,9 +70,11 @@ function Chart({
 }
 
 export default function Progress() {
-  const { data } = useData(() => window.api.view.progress(8), [])
+  const { data, error, loading, refetch } = useData(() => window.api.view.progress(8), [])
   const { data: review } = useData(() => window.api.view.weeklyReview(), [])
 
+  if (error) return (<Screen title="Progress"><ErrorState message={error} onRetry={refetch} /></Screen>)
+  if (loading && !data) return (<Screen title="Progress"><Loading /></Screen>)
   if (!data) return null
 
   const hasData = data.hoursPerWeek.length > 0

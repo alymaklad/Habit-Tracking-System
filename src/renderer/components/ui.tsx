@@ -220,6 +220,77 @@ export function Tier({ level }: { level: number }) {
   )
 }
 
+/**
+ * Shown when a screen's data could not be loaded.
+ *
+ * This exists because the alternative — rendering nothing — is indistinguishable from
+ * a screen that is genuinely empty, and hides the reason entirely.
+ */
+export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  return (
+    <div
+      style={{
+        flexGrow: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 480,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          alignItems: 'center',
+          textAlign: 'center'
+        }}
+      >
+        <span className="display" style={{ fontSize: 18, color: 'var(--bad)' }}>
+          This screen could not load
+        </span>
+        <span
+          className="num"
+          style={{
+            fontSize: 11.5,
+            fontWeight: 400,
+            color: 'var(--dim)',
+            background: 'var(--panel)',
+            border: '1px solid var(--line)',
+            padding: '10px 13px',
+            textWrap: 'pretty',
+            textAlign: 'left',
+            width: '100%'
+          }}
+        >
+          {message}
+        </span>
+        <span style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--faint)', textWrap: 'pretty' }}>
+          If the app was updated while it was open, restarting it usually fixes this.
+        </span>
+        {onRetry ? <Button onClick={onRetry}>TRY AGAIN</Button> : null}
+      </div>
+    </div>
+  )
+}
+
+export function Loading() {
+  return (
+    <div
+      style={{
+        flexGrow: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--faint)'
+      }}
+    >
+      <span className="label">Loading…</span>
+    </div>
+  )
+}
+
 export function Empty({ title, body }: { title: string; body: string }) {
   return (
     <div

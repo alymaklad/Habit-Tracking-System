@@ -87,7 +87,7 @@ const checks = [
   ],
   ['sync status rendered', report.nav.length > EXPECTED_NAV.length, 'status control present'],
   [
-    'every screen renders',
+    'every screen renders with data',
     EXPECTED_ROUTES.every((r) => report.visited.includes(r)) && report.failures.length === 0,
     report.failures.length > 0
       ? report.failures.join('; ')

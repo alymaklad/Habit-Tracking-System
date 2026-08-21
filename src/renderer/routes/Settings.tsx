@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AppSettings, NotificationChannel, SyncStatus, ThemeMode } from '@shared/types'
 import Screen from '../components/Screen'
 import Icon from '../components/Icon'
-import { Button, Card, CardTitle, Field, Label, Toggle } from '../components/ui'
+import { Button, Card, CardTitle, ErrorState, Field, Label, Loading, Toggle } from '../components/ui'
 import { useData } from '../hooks/useData'
 import { SYNC_COLOR, SYNC_LABEL } from '../lib/format'
 
@@ -85,7 +85,7 @@ export default function Settings({
   status: SyncStatus | null
   onSettingsChanged: () => void
 }) {
-  const { data, refetch } = useData(() => window.api.settings.get(), [])
+  const { data, error, refetch } = useData(() => window.api.settings.get(), [])
   const [local, setLocal] = useState<AppSettings | null>(null)
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
@@ -98,7 +98,8 @@ export default function Settings({
     void window.api.google.hasCredentials().then(setHasCreds)
   }, [])
 
-  if (!local) return null
+  if (error) return (<Screen title="Settings"><ErrorState message={error} onRetry={refetch} /></Screen>)
+  if (!local) return (<Screen title="Settings"><Loading /></Screen>)
 
   const save = async (patch: Partial<AppSettings>): Promise<void> => {
     setLocal({ ...local, ...patch } as AppSettings)

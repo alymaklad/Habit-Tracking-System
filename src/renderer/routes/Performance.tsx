@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { PerformanceDay, PerformanceHabit } from '@shared/types'
 import Screen from '../components/Screen'
 import Icon from '../components/Icon'
-import { Bar, Button, Card, CardTitle, Empty, Label, Tier } from '../components/ui'
+import { Bar, Button, Card, CardTitle, Empty, ErrorState, Label, Loading, Tier } from '../components/ui'
 import { useData } from '../hooks/useData'
 import { addDays, duration, mondayOf, toLocalDate } from '../lib/format'
 
@@ -249,22 +249,41 @@ function MonthHeatmap({ grid, peak }: { grid: PerformanceDay[]; peak: number }) 
 
 export default function Performance() {
   const [anchor, setAnchor] = useState(() => toLocalDate(new Date()))
-  const { data } = useData(() => window.api.view.performance(anchor), [anchor])
+  const { data, error, loading, refetch } = useData(
+    () => window.api.view.performance(anchor),
+    [anchor]
+  )
 
+  if (error) {
+    return (
+      <Screen title="Performance">
+        <ErrorState message={error} onRetry={refetch} />
+      </Screen>
+    )
+  }
+  if (loading && !data) {
+    return (
+      <Screen title="Performance">
+        <Loading />
+      </Screen>
+    )
+  }
   if (!data) return null
 
-  const hasAnything = data.days.some((d) => d.scheduled > 0) || data.habits.length > 0
   const monthLabel = new Date(`${data.monthAnchor}T12:00:00`).toLocaleDateString(undefined, {
     month: 'long',
     year: 'numeric'
   })
 
-  if (!hasAnything) {
+  // Only fall back to the empty state when there is genuinely nothing to show. With
+  // habits scheduled but nothing completed yet, a zeroed week is far more useful than
+  // a placeholder — it shows what is coming and what has already been missed.
+  if (data.habits.length === 0 && !data.days.some((d) => d.scheduled > 0)) {
     return (
       <Screen title="Performance" subtitle={`Week ${data.weekNumber}`}>
         <Empty
-          title="No points scored yet"
-          body="Complete a habit and this fills in: the week's total, how each day moved against the one before it, which habit is carrying you and which is slipping."
+          title="Nothing scheduled this week"
+          body="Create a habit and pick the days it runs on. This screen then fills in: the week's total, how each day moved against the one before it, which habit is carrying you and which is slipping."
         />
       </Screen>
     )
