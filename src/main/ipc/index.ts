@@ -80,6 +80,7 @@ export function registerIpc(ctx: AppContext, notifyDataChanged: () => void): voi
   )
   handle('view:calendarMonth', (anchor: LocalDate) => ctx.views.calendarMonth(anchor))
   handle('view:progress', (weeks?: number) => ctx.views.progress(weeks ?? 8))
+  handle('view:performance', (anchor?: LocalDate) => ctx.views.performance(anchor))
   handle('view:weeklyReview', (anchor?: LocalDate) => ctx.views.weeklyReview(anchor))
   handle('view:achievements', () => ctx.views.achievements())
   handle('view:personalRecords', () => ctx.views.personalRecords())

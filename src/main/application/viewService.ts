@@ -6,6 +6,9 @@ import type {
   DashboardView,
   DifficultyProposal,
   LocalDate,
+  PerformanceDay,
+  PerformanceHabit,
+  PerformanceView,
   PersonalRecordView,
   ProgressView,
   SeriesPoint,
@@ -13,7 +16,7 @@ import type {
 } from '@shared/types'
 import { ACHIEVEMENTS, PERSONAL_RECORD_LABELS } from '../domain/achievements'
 import { levelInfo } from '../domain/levels'
-import { fullXp } from '../domain/scoring'
+import { fullXp, improvement } from '../domain/scoring'
 import {
   addDays,
   daysInMonth,
@@ -197,6 +200,174 @@ export function viewService(deps: {
     }
   }
 
+  // ----------------------------------------------------------- performance
+
+  /** Aggregate the daily records for a date range into one row per calendar day. */
+  function daysBetween(from: LocalDate, to: LocalDate, inPeriod: (d: LocalDate) => boolean) {
+    const rows = records.dailyInRange(from, to)
+    const byDate = new Map<LocalDate, PerformanceDay>()
+
+    for (const date of dateRangeInclusive(from, to)) {
+      byDate.set(date, {
+        date,
+        weekday: weekday(date),
+        inPeriod: inPeriod(date),
+        points: 0,
+        xp: 0,
+        minutes: 0,
+        completed: 0,
+        scheduled: 0,
+        delta: null
+      })
+    }
+
+    for (const r of rows) {
+      const day = byDate.get(r.date)
+      if (!day) continue
+      day.points += r.points
+      day.xp += r.xp
+      day.minutes += r.durationMinutes
+      if (r.status !== 'skipped') day.scheduled++
+      if (r.status === 'complete') day.completed++
+    }
+
+    // The delta compares against the previous day that actually had something
+    // scheduled — otherwise a rest day would read as a collapse in performance.
+    const ordered = [...byDate.values()]
+    let previous: PerformanceDay | null = null
+    for (const day of ordered) {
+      if (day.scheduled === 0) continue
+      day.delta = previous ? day.points - previous.points : null
+      previous = day
+    }
+
+    return ordered
+  }
+
+  function dateRangeInclusive(from: LocalDate, to: LocalDate): LocalDate[] {
+    const out: LocalDate[] = []
+    let cursor = from
+    // Guard against a malformed range rather than looping forever.
+    for (let i = 0; i < 400 && cursor <= to; i++) {
+      out.push(cursor)
+      cursor = addDays(cursor, 1)
+    }
+    return out
+  }
+
+  function habitBreakdown(from: LocalDate, to: LocalDate): PerformanceHabit[] {
+    const rows = records.dailyInRange(from, to)
+    const acc = new Map<number, PerformanceHabit>()
+
+    for (const r of rows) {
+      const habit = habits.get(r.habitId)
+      if (!habit) continue
+      let e = acc.get(r.habitId)
+      if (!e) {
+        e = {
+          habitId: r.habitId,
+          name: habit.name,
+          difficultyLevel: habit.difficultyLevel,
+          points: 0,
+          xp: 0,
+          minutes: 0,
+          completed: 0,
+          partial: 0,
+          missed: 0,
+          scheduled: 0,
+          completionRate: 0,
+          trend: null
+        }
+        acc.set(r.habitId, e)
+      }
+      e.points += r.points
+      e.xp += r.xp
+      e.minutes += r.durationMinutes
+      // A justified skip is not held against the habit, so it leaves the denominator.
+      if (r.status !== 'skipped') e.scheduled++
+      if (r.status === 'complete') e.completed++
+      else if (r.status === 'partial') e.partial++
+      else if (r.status === 'missed') e.missed++
+    }
+
+    for (const e of acc.values()) {
+      e.completionRate = e.scheduled === 0 ? 0 : (e.completed / e.scheduled) * 100
+    }
+    return [...acc.values()]
+  }
+
+  function performance(anchor?: LocalDate, now: Date = new Date()): PerformanceView {
+    const today = todayIn(settings.timezone(), now)
+    const ws = weekStart(anchor ?? today)
+    const weekEnd = addDays(ws, 6)
+
+    const days = daysBetween(ws, weekEnd, () => true)
+    const basePoints = days.reduce((s, d) => s + d.points, 0)
+
+    // weekly_record carries the bonuses; the difference is what they contributed.
+    const weekly = records.weekly(ws)
+    const totalPoints = weekly?.totalPoints ?? basePoints
+    const previous = records.weekly(addDays(ws, -7))
+    const previousWeekPoints = previous?.totalPoints ?? 0
+
+    const scheduledDays = days.filter((d) => d.scheduled > 0)
+    const bestDay =
+      scheduledDays.length > 0
+        ? scheduledDays.reduce((m, d) => (d.points > m.points ? d : m))
+        : null
+    const worstDay =
+      scheduledDays.length > 0
+        ? scheduledDays.reduce((m, d) => (d.points < m.points ? d : m))
+        : null
+
+    // Habit ranking, with a trend against the same habit last week.
+    const thisWeek = habitBreakdown(ws, weekEnd)
+    const lastWeek = new Map(
+      habitBreakdown(addDays(ws, -7), addDays(ws, -1)).map((h) => [h.habitId, h])
+    )
+    for (const h of thisWeek) {
+      const prev = lastWeek.get(h.habitId)
+      h.trend = prev && prev.scheduled > 0 ? h.completionRate - prev.completionRate : null
+    }
+
+    // Rank by completion rate, then by points, so a habit scheduled more often does
+    // not automatically outrank a shorter one it beat on consistency.
+    const ranked = [...thisWeek].sort(
+      (a, b) => b.completionRate - a.completionRate || b.points - a.points
+    )
+    const rated = ranked.filter((h) => h.scheduled > 0)
+
+    // Month grid: pad back to Monday so the heatmap lines up with weekday columns.
+    const monthAnchor = anchor ?? today
+    const first = monthStart(monthAnchor)
+    const last = addDays(first, daysInMonth(monthAnchor) - 1)
+    const gridStart = addDays(first, -(weekday(first) - 1))
+    const gridEnd = addDays(gridStart, 41)
+    const monthGrid = daysBetween(gridStart, gridEnd, (d) => d >= first && d <= last)
+    const monthPoints = monthGrid.filter((d) => d.inPeriod).reduce((s, d) => s + d.points, 0)
+    const peakDayPoints = monthGrid.reduce((m, d) => Math.max(m, d.points), 0)
+
+    return {
+      weekStart: ws,
+      weekNumber: isoWeekNumber(ws),
+      totalPoints,
+      basePoints,
+      bonusPoints: totalPoints - basePoints,
+      previousWeekPoints,
+      pointsDelta: improvement(previousWeekPoints, totalPoints),
+      days,
+      bestDay,
+      worstDay,
+      habits: ranked,
+      best: rated[0] ?? null,
+      weakest: rated.length > 1 ? (rated[rated.length - 1] ?? null) : null,
+      monthAnchor,
+      monthGrid,
+      monthPoints,
+      peakDayPoints
+    }
+  }
+
   // --------------------------------------------------------- weekly review
 
   function weeklyReview(anchor?: LocalDate, now: Date = new Date()): WeeklyReview | null {
@@ -325,6 +496,7 @@ export function viewService(deps: {
 
   return {
     dashboard,
+    performance,
     calendarRange,
     calendarMonth,
     progress,

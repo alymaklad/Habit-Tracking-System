@@ -8,6 +8,7 @@ import type {
   Habit,
   HabitDraft,
   LocalDate,
+  PerformanceView,
   PersonalRecordView,
   ProgressView,
   SyncStatus,
@@ -46,6 +47,7 @@ export interface HabitApi {
     calendarRange(from: LocalDate, to: LocalDate): Promise<CalendarBlock[]>
     calendarMonth(anchor: LocalDate): Promise<CalendarMonthDay[]>
     progress(weeks?: number): Promise<ProgressView>
+    performance(anchor?: LocalDate): Promise<PerformanceView>
     weeklyReview(anchor?: LocalDate): Promise<WeeklyReview | null>
     achievements(): Promise<AchievementView[]>
     personalRecords(): Promise<PersonalRecordView[]>

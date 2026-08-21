@@ -44,6 +44,7 @@ const api: HabitApi = {
     calendarRange: (from, to) => invoke('view:calendarRange', from, to),
     calendarMonth: (anchor) => invoke('view:calendarMonth', anchor),
     progress: (weeks) => invoke('view:progress', weeks),
+    performance: (anchor) => invoke('view:performance', anchor),
     weeklyReview: (anchor) => invoke('view:weeklyReview', anchor),
     achievements: () => invoke('view:achievements'),
     personalRecords: () => invoke('view:personalRecords'),

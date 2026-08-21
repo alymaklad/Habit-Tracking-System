@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import { writeFileSync } from 'node:fs'
 import {
   app,
   BrowserWindow,
@@ -164,35 +165,63 @@ function createWindow(): void {
     })
   }
 
-  // Self-check hook: mount the UI, report what rendered, and exit. Used by `npm run
-  // smoke:ui` to verify the renderer actually boots against the real IPC bridge.
+  // Self-check hook: mount the UI, walk every screen, report what rendered, and exit.
+  // Used by `npm run smoke:ui` to verify the renderer boots against the real IPC bridge.
+  //
+  // The navigation is driven from here rather than from one long async script in the
+  // page: each step is a single synchronous expression, so a failure names the screen
+  // that broke instead of leaving one promise pending forever.
   if (process.env.AHL_UI_CHECK) {
+    const reportPath = process.env.AHL_UI_CHECK
+    const ROUTES = ['Habits', 'Calendar', 'Progress', 'Performance', 'Achievements', 'Settings', 'Dashboard']
+    const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
     win.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        void win?.webContents
-          .executeJavaScript(
-            `(() => {
-               const root = document.getElementById('root')
-               const text = document.body.innerText
-               return JSON.stringify({
-                 mounted: !!root && root.children.length > 0,
-                 nav: [...document.querySelectorAll('nav button')].map(b => b.innerText.split('\\n')[0]).filter(Boolean),
-                 hasApi: typeof window.api === 'object',
-                 heading: (text.split('\\n').find(l => l.trim().length > 2) || '').trim()
-               })
-             })()`
+      void (async () => {
+        const wc = win?.webContents
+        const visited: string[] = []
+        const failures: string[] = []
+        try {
+          if (!wc) throw new Error('no webContents')
+          await pause(1200)
+
+          const base = (await wc.executeJavaScript(
+            "(() => JSON.stringify({" +
+              " mounted: !!document.getElementById('root') && document.getElementById('root').children.length > 0," +
+              " hasApi: typeof window.api === 'object'," +
+              " nav: [...document.querySelectorAll('nav button')].map((b) => b.innerText.split('\\n')[0]).filter(Boolean)" +
+              " }))()"
+          )) as string
+
+          for (const name of ROUTES) {
+            const clicked = (await wc.executeJavaScript(
+              "(() => { const b = [...document.querySelectorAll('nav button')]" +
+                ".find((x) => x.innerText.trim().startsWith(" +
+                JSON.stringify(name) +
+                ")); if (!b) return false; b.click(); return true })()"
+            )) as boolean
+            if (!clicked) { failures.push(name + ': no nav button'); continue }
+
+            await pause(350)
+
+            const body = (await wc.executeJavaScript(
+              "(() => { const m = document.querySelector('main'); return m ? m.innerText.trim().length : -1 })()"
+            )) as number
+            if (body > 0) visited.push(name)
+            else failures.push(name + ': rendered empty')
+          }
+
+          writeFileSync(
+            reportPath,
+            JSON.stringify({ ...JSON.parse(base), visited, failures }),
+            'utf8'
           )
-          .then((json: string) => {
-            console.log(`UI_CHECK ${json}`)
-            quitting = true
-            app.quit()
-          })
-          .catch((err: unknown) => {
-            console.error(`UI_CHECK_FAILED ${String(err)}`)
-            quitting = true
-            app.exit(1)
-          })
-      }, 1500)
+        } catch (err) {
+          writeFileSync(reportPath, JSON.stringify({ error: String(err), visited, failures }), 'utf8')
+        }
+        quitting = true
+        app.quit()
+      })()
     })
   }
 

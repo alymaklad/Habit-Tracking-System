@@ -7,6 +7,7 @@ import Dashboard from './routes/Dashboard'
 import Habits from './routes/Habits'
 import CalendarRoute from './routes/Calendar'
 import Progress from './routes/Progress'
+import Performance from './routes/Performance'
 import Achievements from './routes/Achievements'
 import Settings from './routes/Settings'
 import { Leaderboard, Challenges } from './routes/PhaseThree'
@@ -73,6 +74,7 @@ export default function App() {
     habits: <Habits />,
     calendar: <CalendarRoute />,
     progress: <Progress />,
+    performance: <Performance />,
     achievements: <Achievements />,
     leaderboard: <Leaderboard />,
     challenges: <Challenges />,

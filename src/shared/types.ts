@@ -323,6 +323,69 @@ export interface ProgressView {
   improvementPercentage: number | null
 }
 
+// ------------------------------------------------------------ performance
+
+export interface PerformanceDay {
+  date: LocalDate
+  /** ISO weekday, Monday = 1 … Sunday = 7. */
+  weekday: number
+  inPeriod: boolean
+  points: number
+  xp: number
+  minutes: number
+  completed: number
+  scheduled: number
+  /** Change in points against the previous day that had anything scheduled. */
+  delta: number | null
+}
+
+export interface PerformanceHabit {
+  habitId: number
+  name: string
+  difficultyLevel: number
+  points: number
+  xp: number
+  minutes: number
+  completed: number
+  partial: number
+  missed: number
+  scheduled: number
+  completionRate: number
+  /** Change in completion rate against the previous week, in percentage points. */
+  trend: number | null
+}
+
+export interface PerformanceView {
+  weekStart: LocalDate
+  weekNumber: number
+
+  /** Daily points plus weekly bonuses — the figure the league actually scores. */
+  totalPoints: number
+  /** Sum of the day scores alone, before bonuses. */
+  basePoints: number
+  bonusPoints: number
+  previousWeekPoints: number
+  /** Percentage change against the previous week, or null with nothing to compare. */
+  pointsDelta: number | null
+
+  /** Monday to Sunday of the selected week. */
+  days: PerformanceDay[]
+  bestDay: PerformanceDay | null
+  worstDay: PerformanceDay | null
+
+  /** Every active habit that had something scheduled, best first. */
+  habits: PerformanceHabit[]
+  best: PerformanceHabit | null
+  weakest: PerformanceHabit | null
+
+  /** Six-week grid covering the selected month, for the points heatmap. */
+  monthAnchor: LocalDate
+  monthGrid: PerformanceDay[]
+  monthPoints: number
+  /** Highest single-day points in the grid — used to scale the heatmap. */
+  peakDayPoints: number
+}
+
 // ---------------------------------------------------------- calendar
 
 export interface CalendarBlock {
