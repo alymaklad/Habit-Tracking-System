@@ -26,10 +26,16 @@ const isDev = !app.isPackaged
 // packaged build — silently splitting a user's history across two files.
 app.setName('Adaptive Habit League')
 
-/** A single instance only — a second launch focuses the window already running. */
-if (!app.requestSingleInstanceLock()) {
-  app.quit()
-}
+/**
+ * A single instance only — a second launch focuses the window already running.
+ *
+ * `app.quit()` does NOT halt module execution, so everything below has to be guarded
+ * on the lock. Without the guard a losing second instance carries on initialising:
+ * it opens the same SQLite file and can put up a window and a tray icon before the
+ * quit lands.
+ */
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) app.quit()
 
 // ------------------------------------------------------------------ tray
 
@@ -123,7 +129,15 @@ function createWindow(): void {
     }
   })
 
-  win.on('ready-to-show', () => win?.show())
+  // Depending on how the process was launched, Windows can hand back a window that is
+  // already iconic. `show()` on its own honours that state, so the app starts as a
+  // taskbar button and never appears — restore explicitly before showing.
+  win.on('ready-to-show', () => {
+    if (!win) return
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+  })
 
   // Closing the window keeps the app alive in the tray so background sync continues.
   win.on('close', (event) => {
@@ -249,10 +263,109 @@ function nativeToast(title: string, body: string): void {
 
 app.on('second-instance', () => showWindow())
 
-app.whenReady().then(() => {
+if (gotSingleInstanceLock) void start()
+
+async function start(): Promise<void> {
+  await app.whenReady()
   app.setAppUserModelId('com.adaptivehabitleague.app')
 
-  ctx = createContext({
+  /**
+   * Startup failures must never cost the user their window.
+   *
+   * Previously a throw anywhere in here skipped `createWindow()` entirely, leaving the
+   * process alive with no window and no tray — and holding the single-instance lock, so
+   * the app was unreachable and every relaunch appeared to do nothing. The window is now
+   * created whatever happens, and the failure is reported into it.
+   */
+  let startupError: string | null = null
+
+  try {
+    ctx = buildContext()
+  } catch (err) {
+    startupError = `The database could not be opened: ${err instanceof Error ? err.message : String(err)}`
+  }
+
+  if (ctx) {
+    try {
+      ctx.bootstrap()
+    } catch (err) {
+      startupError = `Startup did not finish: ${err instanceof Error ? err.message : String(err)}`
+      console.error('[startup]', err)
+    }
+
+    // Under the self-check, seed a habit and complete it so every screen renders its
+    // POPULATED state. Without this the check only ever exercised empty states, which is
+    // how a screen could pass while being blank with real data. The profile is a
+    // throwaway directory, so nothing here touches a real database.
+    if (process.env.AHL_UI_CHECK) {
+      try {
+        ctx.habits.create({
+          name: 'Check Habit',
+          description: null,
+          notes: null,
+          recurrence: { kind: 'weekly', days: [1, 2, 3, 4, 5, 6, 7] },
+          scheduledTime: '09:00',
+          targetMinutes: 60,
+          baselineMinutes: 60,
+          difficultyLevel: 2,
+          reminderLeadMinutes: 30,
+          colorKey: 'violet',
+          googleTasklistId: null,
+          active: true
+        })
+        const card = ctx.views.dashboard().cards[0]
+        if (card) {
+          // A step plus a manual item, so the to-do screen renders populated too.
+          ctx.todos.addSubtask(card.occurrenceId, 'Check step')
+          ctx.todos.addManual('Check task')
+          ctx.habits.setCompleted(card.occurrenceId, true)
+        }
+      } catch (err) {
+        console.error(`[ui-check] seeding failed: ${String(err)}`)
+      }
+    }
+
+    try {
+      registerIpc(ctx, () => {
+        send(PUSH_CHANNELS.dashboard)
+        updateTray()
+      })
+    } catch (err) {
+      startupError = `The app could not start: ${err instanceof Error ? err.message : String(err)}`
+    }
+  }
+
+  createWindow()
+  createTray()
+
+  if (startupError) {
+    // The renderer subscribes on mount, so wait for it before reporting.
+    win?.webContents.once('did-finish-load', () => {
+      send(PUSH_CHANNELS.toast, {
+        kind: 'error',
+        title: 'Something went wrong starting up',
+        body: startupError
+      } satisfies ToastMessage)
+    })
+  } else {
+    // Start syncing in the background. With no Google connection this still expands the
+    // schedule and recomputes, because the app is fully usable offline.
+    ctx?.orchestrator.start()
+  }
+
+  // Waking from sleep invalidates every armed timer and may have missed a sync window.
+  powerMonitor.on('resume', () => {
+    ctx?.reminders.rearm()
+    ctx?.orchestrator.nudge('resume')
+  })
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+}
+
+function buildContext(): AppContext {
+  return createContext({
     dbPath: join(app.getPath('userData'), 'habits.db'),
     toast: nativeToast,
     onSyncStatus: (status: SyncStatus) => {
@@ -266,62 +379,7 @@ app.whenReady().then(() => {
     }
   })
 
-  ctx.bootstrap()
-
-  // Under the self-check, seed a habit and complete it so every screen renders its
-  // POPULATED state. Without this the check only ever exercised empty states, which is
-  // how a screen could pass while being blank with real data. The profile is a
-  // throwaway directory, so nothing here touches a real database.
-  if (process.env.AHL_UI_CHECK) {
-    try {
-      ctx.habits.create({
-        name: 'Check Habit',
-        description: null,
-        notes: null,
-        recurrence: { kind: 'weekly', days: [1, 2, 3, 4, 5, 6, 7] },
-        scheduledTime: '09:00',
-        targetMinutes: 60,
-        baselineMinutes: 60,
-        difficultyLevel: 2,
-        reminderLeadMinutes: 30,
-        colorKey: 'violet',
-        googleTasklistId: null,
-        active: true
-      })
-      const card = ctx.views.dashboard().cards[0]
-      if (card) {
-        // A step plus a manual item, so the to-do screen renders populated too.
-        ctx.todos.addSubtask(card.occurrenceId, 'Check step')
-        ctx.todos.addManual('Check task')
-        ctx.habits.setCompleted(card.occurrenceId, true)
-      }
-    } catch (err) {
-      console.error(`[ui-check] seeding failed: ${String(err)}`)
-    }
-  }
-
-  registerIpc(ctx, () => {
-    send(PUSH_CHANNELS.dashboard)
-    updateTray()
-  })
-
-  createWindow()
-  createTray()
-
-  // Start syncing in the background. With no Google connection this still expands the
-  // schedule and recomputes, because the app is fully usable offline.
-  ctx.orchestrator.start()
-
-  // Waking from sleep invalidates every armed timer and may have missed a sync window.
-  powerMonitor.on('resume', () => {
-    ctx?.reminders.rearm()
-    ctx?.orchestrator.nudge('resume')
-  })
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
+}
 
 app.on('before-quit', () => {
   quitting = true
