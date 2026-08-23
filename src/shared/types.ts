@@ -327,6 +327,69 @@ export interface ProgressView {
   improvementPercentage: number | null
 }
 
+// ---------------------------------------------------------------- to-do
+
+export type TodoKind = 'manual' | 'subtask'
+
+export interface TodoItem {
+  id: number
+  kind: TodoKind
+  title: string
+  notes: string | null
+  done: boolean
+  dropped: boolean
+  /** Manual items: the day it sits on. */
+  date: LocalDate | null
+  /** Days it has been pushed forward without being finished. */
+  carried: number
+  overdue: boolean
+  /** Subtasks: the habit and occurrence they belong to. */
+  habitId: number | null
+  habitName: string | null
+  occurrenceId: number | null
+  scheduledTime: LocalTime | null
+}
+
+export interface TodoGroup {
+  /** null for the standalone manual group. */
+  habitId: number | null
+  habitName: string | null
+  occurrenceId: number | null
+  scheduledTime: LocalTime | null
+  /** Whether the habit itself is already complete. */
+  habitComplete: boolean
+  items: TodoItem[]
+  done: number
+  total: number
+}
+
+export interface TodoSuggestion {
+  title: string
+  reason: string
+}
+
+export interface TodoAvoidance {
+  todoId: number
+  title: string
+  carried: number
+  message: string
+}
+
+export interface TodoView {
+  date: LocalDate
+  /** Everything for the day, already ordered by urgency. */
+  items: TodoItem[]
+  /** The same items grouped: one group per habit with steps, plus manual items. */
+  groups: TodoGroup[]
+  manualDone: number
+  manualTotal: number
+  subtaskDone: number
+  subtaskTotal: number
+  carriedCount: number
+  suggestions: TodoSuggestion[]
+  avoidance: TodoAvoidance[]
+}
+
 // ------------------------------------------------------------ performance
 
 export interface PerformanceDay {

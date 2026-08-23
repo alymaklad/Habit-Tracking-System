@@ -4,6 +4,7 @@ import { SyncStatusControl } from './SyncStatus'
 
 export type Route =
   | 'dashboard'
+  | 'todo'
   | 'habits'
   | 'calendar'
   | 'progress'
@@ -16,6 +17,7 @@ export type Route =
 const NAV: { key: Route; label: string; icon: Parameters<typeof Icon>[0]['name']; phase3?: boolean }[] =
   [
     { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { key: 'todo', label: 'To-do', icon: 'todo' },
     { key: 'habits', label: 'Habits', icon: 'habits' },
     { key: 'calendar', label: 'Calendar', icon: 'calendar' },
     { key: 'progress', label: 'Progress', icon: 'progress' },

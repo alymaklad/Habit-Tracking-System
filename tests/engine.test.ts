@@ -7,6 +7,7 @@ import { occurrenceRepo } from '@main/persistence/occurrenceRepo'
 import { logRepo } from '@main/persistence/logRepo'
 import { recordRepo } from '@main/persistence/recordRepo'
 import { settingsRepo } from '@main/persistence/settingsRepo'
+import { todoRepo } from '@main/persistence/todoRepo'
 import { scheduleService } from '@main/application/scheduleService'
 import { recomputeService } from '@main/application/recomputeService'
 import { viewService } from '@main/application/viewService'
@@ -25,12 +26,13 @@ function harness() {
   const logs = logRepo(db)
   const records = recordRepo(db)
   const settings = settingsRepo(db)
+  const todos = todoRepo(db)
   settings.save({ timezone: 'Africa/Cairo', provisionHorizonDays: 7 })
 
   const schedule = scheduleService({ db, habits, occurrences, settings })
   const engine = recomputeService({ db, habits, occurrences, logs, records, settings })
 
-  return { db, habits, occurrences, logs, records, settings, schedule, engine }
+  return { db, habits, occurrences, logs, records, settings, todos, schedule, engine }
 }
 
 const draft = (o: Partial<HabitDraft> = {}): HabitDraft => ({
@@ -412,6 +414,7 @@ describe('live timer figures', () => {
       logs: h.logs,
       records: h.records,
       settings: h.settings,
+      todos: h.todos,
       engine: h.engine,
       runningOccurrenceId: () => occ.id
     })
@@ -442,6 +445,7 @@ describe('live timer figures', () => {
       logs: h.logs,
       records: h.records,
       settings: h.settings,
+      todos: h.todos,
       engine: h.engine,
       runningOccurrenceId: () => null
     })

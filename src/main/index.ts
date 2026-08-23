@@ -173,7 +173,7 @@ function createWindow(): void {
   // that broke instead of leaving one promise pending forever.
   if (process.env.AHL_UI_CHECK) {
     const reportPath = process.env.AHL_UI_CHECK
-    const ROUTES = ['Habits', 'Calendar', 'Progress', 'Performance', 'Achievements', 'Settings', 'Dashboard']
+    const ROUTES = ['To-do', 'Habits', 'Calendar', 'Progress', 'Performance', 'Achievements', 'Settings', 'Dashboard']
     const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
     win.webContents.once('did-finish-load', () => {
@@ -289,7 +289,12 @@ app.whenReady().then(() => {
         active: true
       })
       const card = ctx.views.dashboard().cards[0]
-      if (card) ctx.habits.setCompleted(card.occurrenceId, true)
+      if (card) {
+        // A step plus a manual item, so the to-do screen renders populated too.
+        ctx.todos.addSubtask(card.occurrenceId, 'Check step')
+        ctx.todos.addManual('Check task')
+        ctx.habits.setCompleted(card.occurrenceId, true)
+      }
     } catch (err) {
       console.error(`[ui-check] seeding failed: ${String(err)}`)
     }

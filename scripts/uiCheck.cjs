@@ -57,6 +57,7 @@ if (report.error) {
 }
 const EXPECTED_NAV = [
   'Dashboard',
+  'To-do',
   'Habits',
   'Calendar',
   'Progress',
@@ -68,6 +69,7 @@ const EXPECTED_NAV = [
 ]
 
 const EXPECTED_ROUTES = [
+  'To-do',
   'Habits',
   'Calendar',
   'Progress',

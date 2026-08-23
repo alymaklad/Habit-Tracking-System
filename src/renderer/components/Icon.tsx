@@ -69,6 +69,14 @@ const PATHS = {
       <path d='M15 6h6v6' />
     </>
   ),
+  todo: (
+    <>
+      <rect x='3' y='4' width='7' height='7' rx='1' />
+      <path d='M4.6 7.4 6 8.8 8.6 5.6' />
+      <path d='M13 6h8M13 12h8M13 18h8' />
+      <rect x='3' y='14' width='7' height='7' rx='1' />
+    </>
+  ),
   flame: <path d="M12 3c.7 2.6 2.4 3.6 3.4 5.2A6 6 0 1 1 6 12c0-2.4 1.6-3.6 2.4-5.2.6 1 1.2 1.5 2 1.8C10.2 6.4 10.8 4.6 12 3Z" />,
   play: <path d="M8 5.5v13l11-6.5Z" />,
   stop: <rect x="7" y="7" width="10" height="10" />,

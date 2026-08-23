@@ -6,9 +6,11 @@ import { logRepo } from './persistence/logRepo'
 import { recordRepo } from './persistence/recordRepo'
 import { settingsRepo } from './persistence/settingsRepo'
 import { syncRepo } from './persistence/syncRepo'
+import { todoRepo } from './persistence/todoRepo'
 import { scheduleService } from './application/scheduleService'
 import { recomputeService } from './application/recomputeService'
 import { habitService } from './application/habitService'
+import { todoService } from './application/todoService'
 import { viewService } from './application/viewService'
 import { notificationService } from './application/notificationService'
 import { reminderScheduler } from './application/reminderScheduler'
@@ -48,16 +50,20 @@ export function createContext(opts: ContextOptions) {
   const records = recordRepo(db)
   const settings = settingsRepo(db)
   const sync = syncRepo(db)
+  const todos = todoRepo(db)
 
   const schedule = scheduleService({ db, habits, occurrences, settings })
   const engine = recomputeService({ db, habits, occurrences, logs, records, settings })
   const habitsApi = habitService({ db, habits, occurrences, logs, records, settings, schedule, engine })
+  const todosApi = todoService({ db, todos, occurrences, settings, habits: habitsApi })
+
   const views = viewService({
     habits,
     occurrences,
     logs,
     records,
     settings,
+    todos,
     engine,
     runningOccurrenceId: () => habitsApi.runningOccurrenceId()
   })
@@ -130,16 +136,21 @@ export function createContext(opts: ContextOptions) {
     schedule.expandHorizon()
     const horizon = schedule.horizon()
     engine.refresh(horizon.from, horizon.to)
+    // Unfinished to-dos follow you into today rather than being quietly lost, and new
+    // occurrences arrive carrying whatever steps their habit defines.
+    todosApi.carryForward()
+    todosApi.applyTemplatesInRange(horizon.from, horizon.to)
     reminders.rearm()
   }
 
   return {
     // The database handle deliberately stays inside the context: everything outside
     // goes through a repository or a service.
-    repos: { habits, occurrences, logs, records, settings, sync },
+    repos: { habits, occurrences, logs, records, settings, sync, todos },
     schedule,
     engine,
     habits: habitsApi,
+    todos: todosApi,
     views,
     notifications,
     reminders,

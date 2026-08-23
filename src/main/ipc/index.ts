@@ -81,10 +81,40 @@ export function registerIpc(ctx: AppContext, notifyDataChanged: () => void): voi
   handle('view:calendarMonth', (anchor: LocalDate) => ctx.views.calendarMonth(anchor))
   handle('view:progress', (weeks?: number) => ctx.views.progress(weeks ?? 8))
   handle('view:performance', (anchor?: LocalDate) => ctx.views.performance(anchor))
+  handle('view:todos', (anchor?: LocalDate) => ctx.views.todoView(anchor))
   handle('view:weeklyReview', (anchor?: LocalDate) => ctx.views.weeklyReview(anchor))
   handle('view:achievements', () => ctx.views.achievements())
   handle('view:personalRecords', () => ctx.views.personalRecords())
   handle('view:proposals', () => ctx.views.proposals())
+
+  // ------------------------------------------------------------- to-do
+
+  mutate('todo:addManual', (title: string, date?: LocalDate) => ctx.todos.addManual(title, date))
+  mutate('todo:addSubtask', (occurrenceId: number, title: string) =>
+    ctx.todos.addSubtask(occurrenceId, title)
+  )
+
+  mutate('todo:setDone', (id: number, done: boolean) => {
+    const item = ctx.repos.todos.get(id)
+    ctx.todos.setDone(id, done)
+    // Finishing the last step completes the habit itself, and that has to reach Google
+    // like any other completion — otherwise the phone and the app disagree.
+    if (item?.occurrenceId != null) {
+      const occ = ctx.repos.occurrences.get(item.occurrenceId)
+      if (occ?.googleTaskId) ctx.syncer.enqueueStatus(occ.id, occ.completedAt !== null)
+    }
+  })
+
+  mutate('todo:rename', (id: number, title: string) => ctx.todos.rename(id, title))
+  mutate('todo:drop', (id: number) => ctx.todos.drop(id))
+  mutate('todo:remove', (id: number) => ctx.todos.remove(id))
+  mutate('todo:reschedule', (id: number, date: LocalDate) => ctx.todos.reschedule(id, date))
+  handle('todo:templatesFor', (habitId: number) => ctx.todos.templatesFor(habitId))
+  mutate('todo:setTemplates', (habitId: number, titles: string[]) => {
+    ctx.todos.setTemplates(habitId, titles)
+    const horizon = ctx.schedule.horizon()
+    ctx.todos.applyTemplatesInRange(horizon.from, horizon.to)
+  })
 
   mutate('proposal:accept', (id: number) => ctx.habits.acceptProposal(id))
   mutate('proposal:reject', (id: number) => ctx.habits.rejectProposal(id))

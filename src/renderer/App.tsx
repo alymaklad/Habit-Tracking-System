@@ -4,6 +4,7 @@ import Sidebar, { type Route } from './components/Sidebar'
 import { SyncDetailsPanel } from './components/SyncStatus'
 import { useData } from './hooks/useData'
 import Dashboard from './routes/Dashboard'
+import Todo from './routes/Todo'
 import Habits from './routes/Habits'
 import CalendarRoute from './routes/Calendar'
 import Progress from './routes/Progress'
@@ -71,6 +72,7 @@ export default function App() {
 
   const screens: Record<Route, ReactElement> = {
     dashboard: <Dashboard />,
+    todo: <Todo />,
     habits: <Habits />,
     calendar: <CalendarRoute />,
     progress: <Progress />,

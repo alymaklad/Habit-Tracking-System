@@ -45,10 +45,23 @@ const api: HabitApi = {
     calendarMonth: (anchor) => invoke('view:calendarMonth', anchor),
     progress: (weeks) => invoke('view:progress', weeks),
     performance: (anchor) => invoke('view:performance', anchor),
+    todos: (anchor) => invoke('view:todos', anchor),
     weeklyReview: (anchor) => invoke('view:weeklyReview', anchor),
     achievements: () => invoke('view:achievements'),
     personalRecords: () => invoke('view:personalRecords'),
     proposals: () => invoke('view:proposals')
+  },
+
+  todo: {
+    addManual: (title, date) => invoke('todo:addManual', title, date),
+    addSubtask: (occurrenceId, title) => invoke('todo:addSubtask', occurrenceId, title),
+    setDone: (id, done) => invoke('todo:setDone', id, done),
+    rename: (id, title) => invoke('todo:rename', id, title),
+    drop: (id) => invoke('todo:drop', id),
+    remove: (id) => invoke('todo:remove', id),
+    reschedule: (id, date) => invoke('todo:reschedule', id, date),
+    templatesFor: (habitId) => invoke('todo:templatesFor', habitId),
+    setTemplates: (habitId, titles) => invoke('todo:setTemplates', habitId, titles)
   },
 
   proposal: {

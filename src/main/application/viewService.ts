@@ -10,6 +10,9 @@ import type {
   PerformanceHabit,
   PerformanceView,
   PersonalRecordView,
+  TodoGroup,
+  TodoItem,
+  TodoView,
   WeekVerdict,
   ProgressView,
   SeriesPoint,
@@ -29,11 +32,13 @@ import {
   weekday
 } from '../domain/time'
 import { proposeAdjustment } from '../domain/difficulty'
+import { carriedDays, detectAvoidance, isOverdue, orderByUrgency, suggestFromHistory } from '../domain/todo'
 import type { HabitRepo } from '../persistence/habitRepo'
 import type { OccurrenceRepo } from '../persistence/occurrenceRepo'
 import type { LogRepo } from '../persistence/logRepo'
 import type { RecordRepo } from '../persistence/recordRepo'
 import type { SettingsRepo } from '../persistence/settingsRepo'
+import type { TodoRepo } from '../persistence/todoRepo'
 import type { RecomputeService } from './recomputeService'
 
 /** Read models for the renderer. Everything here is derived; nothing is written. */
@@ -43,10 +48,11 @@ export function viewService(deps: {
   logs: LogRepo
   records: RecordRepo
   settings: SettingsRepo
+  todos: TodoRepo
   engine: RecomputeService
   runningOccurrenceId: () => number | null
 }) {
-  const { habits, occurrences, logs, records, settings, engine, runningOccurrenceId } = deps
+  const { habits, occurrences, logs, records, settings, todos, engine, runningOccurrenceId } = deps
 
   function today(now: Date = new Date()): LocalDate {
     return todayIn(settings.timezone(), now)
@@ -210,6 +216,97 @@ export function viewService(deps: {
       difficultySeries,
       totalHours,
       improvementPercentage: last?.improvementPercentage ?? null
+    }
+  }
+
+  // ---------------------------------------------------------------- to-do
+
+  function todoView(anchor?: LocalDate, now: Date = new Date()): TodoView {
+    const date = anchor ?? today(now)
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+    const records = todos.listForDate(date).filter((t) => !t.dropped)
+    const ordered = orderByUrgency(records, date, nowMinutes)
+
+    const habitName = (id: number | null): string | null =>
+      id === null ? null : (habits.get(id)?.name ?? null)
+
+    const items: TodoItem[] = ordered.map((t) => ({
+      id: t.id,
+      kind: t.kind,
+      title: t.title,
+      notes: (t as { notes?: string | null }).notes ?? null,
+      done: t.done,
+      dropped: t.dropped,
+      date: t.date,
+      carried: carriedDays(t),
+      overdue: isOverdue(t, date, nowMinutes),
+      habitId: t.habitId,
+      habitName: habitName(t.habitId),
+      occurrenceId: (t as { occurrenceId?: number | null }).occurrenceId ?? null,
+      scheduledTime: t.scheduledTime
+    }))
+
+    // Group subtasks under their habit; manual items share one group.
+    const groups: TodoGroup[] = []
+    const byOccurrence = new Map<number, TodoGroup>()
+
+    for (const item of items) {
+      if (item.kind === 'subtask' && item.occurrenceId !== null) {
+        let group = byOccurrence.get(item.occurrenceId)
+        if (!group) {
+          const occ = occurrences.get(item.occurrenceId)
+          group = {
+            habitId: item.habitId,
+            habitName: item.habitName,
+            occurrenceId: item.occurrenceId,
+            scheduledTime: item.scheduledTime,
+            habitComplete: occ?.completedAt !== null && occ?.completedAt !== undefined,
+            items: [],
+            done: 0,
+            total: 0
+          }
+          byOccurrence.set(item.occurrenceId, group)
+          groups.push(group)
+        }
+        group.items.push(item)
+        group.total++
+        if (item.done) group.done++
+      }
+    }
+
+    const manual = items.filter((i) => i.kind === 'manual')
+    if (manual.length > 0) {
+      groups.push({
+        habitId: null,
+        habitName: null,
+        occurrenceId: null,
+        scheduledTime: null,
+        habitComplete: false,
+        items: manual,
+        done: manual.filter((i) => i.done).length,
+        total: manual.length
+      })
+    }
+
+    // Suggestions are withheld when the title is already on today's list.
+    const suggestions = suggestFromHistory(
+      todos.history(),
+      date,
+      items.map((i) => i.title)
+    ).map((s) => ({ title: s.title, reason: s.reason }))
+
+    return {
+      date,
+      items,
+      groups,
+      manualDone: manual.filter((i) => i.done).length,
+      manualTotal: manual.length,
+      subtaskDone: items.filter((i) => i.kind === 'subtask' && i.done).length,
+      subtaskTotal: items.filter((i) => i.kind === 'subtask').length,
+      carriedCount: items.filter((i) => i.carried > 0 && !i.done).length,
+      suggestions,
+      avoidance: detectAvoidance(records)
     }
   }
 
@@ -562,6 +659,7 @@ export function viewService(deps: {
 
   return {
     dashboard,
+    todoView,
     performance,
     calendarRange,
     calendarMonth,

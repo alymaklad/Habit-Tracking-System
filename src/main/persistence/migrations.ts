@@ -185,5 +185,62 @@ ALTER TABLE occurrence ADD COLUMN event_etag TEXT;
 CREATE UNIQUE INDEX idx_occurrence_event ON occurrence (google_event_id)
   WHERE google_event_id IS NOT NULL;
 `
+  },
+  {
+    id: 3,
+    name: 'to-do list',
+    sql: `
+-- Two kinds of entry share one table because they share a lifecycle — ordering,
+-- completion, carrying forward — and differ only in what they are attached to:
+--
+--   manual  : a standalone item, owned by a DATE, carried forward if unfinished
+--   subtask : a step of one habit occurrence; when every subtask is done the
+--             occurrence itself is marked complete
+--
+-- Subtasks are never carried forward: they belong to a specific day's occurrence,
+-- and moving one to tomorrow would silently rewrite what happened yesterday.
+CREATE TABLE todo (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind           TEXT    NOT NULL CHECK (kind IN ('manual', 'subtask')),
+  title          TEXT    NOT NULL,
+  notes          TEXT,
+
+  -- Manual items only: the day the item currently sits on. Carrying forward moves
+  -- this while leaving created_on alone, so "carried N days" is derivable.
+  date           TEXT,
+  created_on     TEXT,
+
+  -- Subtasks only.
+  occurrence_id  INTEGER REFERENCES occurrence (id) ON DELETE CASCADE,
+  habit_id       INTEGER REFERENCES habit (id) ON DELETE CASCADE,
+
+  position       INTEGER NOT NULL DEFAULT 0,
+  done           INTEGER NOT NULL DEFAULT 0,
+  completed_at   TEXT,
+  -- Set when the user gives up on an item rather than completing it. Kept rather
+  -- than deleted so the avoidance detector can still see the history.
+  dropped_at     TEXT,
+  created_at     TEXT    NOT NULL,
+
+  -- A manual item must sit on a date; a subtask must belong to an occurrence.
+  CHECK (
+    (kind = 'manual'  AND date IS NOT NULL AND occurrence_id IS NULL) OR
+    (kind = 'subtask' AND occurrence_id IS NOT NULL)
+  )
+);
+
+CREATE INDEX idx_todo_date ON todo (date) WHERE kind = 'manual';
+CREATE INDEX idx_todo_occurrence ON todo (occurrence_id) WHERE kind = 'subtask';
+CREATE INDEX idx_todo_open ON todo (done, dropped_at);
+
+-- A habit can carry a template of steps, applied to each new occurrence.
+CREATE TABLE habit_subtask_template (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  habit_id   INTEGER NOT NULL REFERENCES habit (id) ON DELETE CASCADE,
+  title      TEXT    NOT NULL,
+  position   INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_subtask_template_habit ON habit_subtask_template (habit_id);
+`
   }
 ]

@@ -10,6 +10,7 @@ import type {
   LocalDate,
   PerformanceView,
   PersonalRecordView,
+  TodoView,
   ProgressView,
   SyncStatus,
   ToastMessage,
@@ -48,10 +49,23 @@ export interface HabitApi {
     calendarMonth(anchor: LocalDate): Promise<CalendarMonthDay[]>
     progress(weeks?: number): Promise<ProgressView>
     performance(anchor?: LocalDate): Promise<PerformanceView>
+    todos(anchor?: LocalDate): Promise<TodoView>
     weeklyReview(anchor?: LocalDate): Promise<WeeklyReview | null>
     achievements(): Promise<AchievementView[]>
     personalRecords(): Promise<PersonalRecordView[]>
     proposals(): Promise<DifficultyProposal[]>
+  }
+
+  todo: {
+    addManual(title: string, date?: LocalDate): Promise<number>
+    addSubtask(occurrenceId: number, title: string): Promise<number>
+    setDone(id: number, done: boolean): Promise<void>
+    rename(id: number, title: string): Promise<void>
+    drop(id: number): Promise<void>
+    remove(id: number): Promise<void>
+    reschedule(id: number, date: LocalDate): Promise<void>
+    templatesFor(habitId: number): Promise<{ id: number; title: string; position: number }[]>
+    setTemplates(habitId: number, titles: string[]): Promise<void>
   }
 
   proposal: {
