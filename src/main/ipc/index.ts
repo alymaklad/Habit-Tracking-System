@@ -1,5 +1,15 @@
 import { app, ipcMain, shell } from 'electron'
-import type { AppSettings, HabitDraft, LocalDate } from '@shared/types'
+import {
+  PUSH_CHANNELS,
+  type AiProvider,
+  type AppSettings,
+  type GoalDraftInput,
+  type GoalPlan,
+  type GoalResource,
+  type HabitDraft,
+  type LocalDate,
+  type MindMapNode
+} from '@shared/types'
 import type { AppContext } from '../context'
 
 /**
@@ -7,7 +17,11 @@ import type { AppContext } from '../context'
  * these and nothing else. Handlers are thin: they validate, delegate to a service, and
  * return a plain serialisable value.
  */
-export function registerIpc(ctx: AppContext, notifyDataChanged: () => void): void {
+export function registerIpc(
+  ctx: AppContext,
+  notifyDataChanged: () => void,
+  push: (channel: string, payload?: unknown) => void = () => undefined
+): void {
   const handle = <T extends unknown[], R>(
     channel: string,
     fn: (...args: T) => R | Promise<R>
@@ -34,9 +48,10 @@ export function registerIpc(ctx: AppContext, notifyDataChanged: () => void): voi
   mutate('habits:create', (draft: HabitDraft) => ctx.habits.create(draft))
   mutate('habits:update', async (id: number, draft: HabitDraft) => {
     const { habit, orphaned } = ctx.habits.update(id, draft)
-    // Retire the Google tasks a narrowed schedule orphaned, best-effort.
+    // Retire what a narrowed schedule orphaned — the Google task AND the mirrored
+    // calendar reminder, best-effort.
     if (orphaned.length > 0) {
-      void ctx.provisioner.removeOrphans(orphaned).catch(() => undefined)
+      void ctx.cleanupOrphanedOccurrences(orphaned).catch(() => undefined)
     }
     return habit
   })
@@ -143,6 +158,31 @@ export function registerIpc(ctx: AppContext, notifyDataChanged: () => void): voi
   })
 
   mutate('settings:recomputeAll', () => ctx.engine.rebuildAll())
+
+  // -------------------------------------------------------------- goals
+
+  handle('goals:list', () => ctx.goals.list())
+  handle('goals:get', (id: number) => ctx.goals.get(id))
+  // Not a mutation: nothing is written until the user approves the draft. Progress is
+  // pushed so the wizard can name the phase instead of showing a bare spinner.
+  handle('goals:draftPlan', (input: GoalDraftInput) =>
+    ctx.goals.draftPlan(input, (progress) => push(PUSH_CHANNELS.goalProgress, progress))
+  )
+  mutate('goals:commit', (input: GoalDraftInput, plan: GoalPlan) => ctx.goals.commit(input, plan))
+  mutate('goals:close', (id: number, outcome: 'achieved' | 'abandoned') => ctx.goals.close(id, outcome))
+  mutate('goals:reopen', (id: number) => ctx.goals.reopen(id))
+  mutate('goals:updatePlan', (id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[] }) =>
+    ctx.goals.updatePlan(id, patch)
+  )
+  mutate('goals:remove', (id: number) => ctx.goals.remove(id))
+
+  // ----------------------------------------------------------------- ai
+
+  handle('ai:status', () => ctx.aiStatus())
+  mutate('ai:setProvider', (provider: AiProvider) => ctx.setAiProvider(provider))
+  mutate('ai:setCredentials', (provider: AiProvider, apiKey: string | null, model: string | null) =>
+    ctx.setAiCredentials(provider, apiKey, model)
+  )
 
   // ------------------------------------------------------------- google
 

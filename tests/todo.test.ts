@@ -63,6 +63,7 @@ const draft = (o: Partial<HabitDraft> = {}): HabitDraft => ({
   reminderLeadMinutes: 30,
   colorKey: 'violet',
   googleTasklistId: null,
+  goalId: null,
   active: true,
   ...o
 })

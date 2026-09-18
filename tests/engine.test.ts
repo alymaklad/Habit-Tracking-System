@@ -47,6 +47,7 @@ const draft = (o: Partial<HabitDraft> = {}): HabitDraft => ({
   reminderLeadMinutes: 30,
   colorKey: 'violet',
   googleTasklistId: null,
+  goalId: null,
   active: true,
   ...o
 })
@@ -372,8 +373,10 @@ describe('weekly aggregation', () => {
 
     h.engine.refresh('2026-08-10', '2026-08-27', NOW)
 
-    const prev = h.records.weekly('2026-08-10')!
-    const cur = h.records.weekly('2026-08-17')!
+    // Weeks run Sat–Fri: 08-10/11/12 (Mon–Wed) fall in the week starting 08-08, and
+    // 08-17/18/19/20 (Mon–Thu) fall in the week starting 08-15 — one week later.
+    const prev = h.records.weekly('2026-08-08')!
+    const cur = h.records.weekly('2026-08-15')!
     expect(prev.totalMinutes).toBe(360)
     expect(cur.totalMinutes).toBe(480)
     expect(cur.improvementPercentage).toBeCloseTo(33.33, 1)

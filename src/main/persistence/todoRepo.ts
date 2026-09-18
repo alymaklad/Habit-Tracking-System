@@ -46,17 +46,30 @@ export function todoRepo(db: Db) {
   return {
     // ------------------------------------------------------------ manual
 
-    addManual(title: string, date: LocalDate, notes: string | null = null): number {
+    addManual(
+      title: string,
+      date: LocalDate,
+      notes: string | null = null,
+      goalId: number | null = null
+    ): number {
       const next = db
         .prepare('SELECT COALESCE(MAX(position), 0) + 1 AS p FROM todo WHERE date = ?')
         .get(date) as { p: number }
       const info = db
         .prepare(
-          `INSERT INTO todo (kind, title, notes, date, created_on, position, created_at)
-           VALUES ('manual', ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO todo (kind, title, notes, date, created_on, position, goal_id, created_at)
+           VALUES ('manual', ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(title.trim(), notes, date, date, next.p, new Date().toISOString())
+        .run(title.trim(), notes, date, date, next.p, goalId, new Date().toISOString())
       return Number(info.lastInsertRowid)
+    },
+
+    /** Milestones a goal created, in due-date order, including finished and dropped ones. */
+    listByGoal(goalId: number): TodoRecord[] {
+      const rows = db
+        .prepare("SELECT * FROM todo WHERE kind = 'manual' AND goal_id = ? ORDER BY date, position, id")
+        .all(goalId) as TodoRow[]
+      return rows.map((r) => toRecord(r))
     },
 
     /** Manual items sitting on a date, plus subtasks of that date's occurrences. */

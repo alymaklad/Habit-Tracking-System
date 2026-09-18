@@ -15,6 +15,7 @@ interface HabitRow {
   color_key: string
   google_tasklist_id: string | null
   active: number
+  goal_id: number | null
   created_at: string
 }
 
@@ -33,6 +34,7 @@ function toHabit(r: HabitRow): Habit {
     colorKey: r.color_key,
     googleTasklistId: r.google_tasklist_id,
     active: intToBool(r.active),
+    goalId: r.goal_id ?? null,
     createdAt: r.created_at
   }
 }
@@ -47,10 +49,10 @@ export function habitRepo(db: Db) {
   const insert = db.prepare(`
     INSERT INTO habit (name, description, notes, recurrence, scheduled_time, target_minutes,
                        baseline_minutes, difficulty_level, reminder_lead_minutes, color_key,
-                       google_tasklist_id, active, created_at)
+                       google_tasklist_id, active, goal_id, created_at)
     VALUES (@name, @description, @notes, @recurrence, @scheduled_time, @target_minutes,
             @baseline_minutes, @difficulty_level, @reminder_lead_minutes, @color_key,
-            @google_tasklist_id, @active, @created_at)
+            @google_tasklist_id, @active, @goal_id, @created_at)
   `)
 
   const update = db.prepare(`
@@ -59,7 +61,8 @@ export function habitRepo(db: Db) {
                      target_minutes = @target_minutes, baseline_minutes = @baseline_minutes,
                      difficulty_level = @difficulty_level,
                      reminder_lead_minutes = @reminder_lead_minutes, color_key = @color_key,
-                     google_tasklist_id = @google_tasklist_id, active = @active
+                     google_tasklist_id = @google_tasklist_id, active = @active,
+                     goal_id = @goal_id
      WHERE id = @id
   `)
 
@@ -75,7 +78,8 @@ export function habitRepo(db: Db) {
     reminder_lead_minutes: h.reminderLeadMinutes,
     color_key: h.colorKey,
     google_tasklist_id: h.googleTasklistId,
-    active: boolToInt(h.active)
+    active: boolToInt(h.active),
+    goal_id: h.goalId ?? null
   })
 
   return {
@@ -86,6 +90,13 @@ export function habitRepo(db: Db) {
 
     listActive(): Habit[] {
       return (selectActive.all() as HabitRow[]).map(toHabit)
+    },
+
+    listByGoal(goalId: number): Habit[] {
+      const rows = db
+        .prepare('SELECT * FROM habit WHERE goal_id = ? ORDER BY scheduled_time, name COLLATE NOCASE')
+        .all(goalId) as HabitRow[]
+      return rows.map(toHabit)
     },
 
     get(id: number): Habit | null {

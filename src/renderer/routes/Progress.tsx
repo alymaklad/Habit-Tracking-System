@@ -148,7 +148,7 @@ export default function Progress() {
         {review ? (
           <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Card accent="var(--accent)" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-              <CardTitle>Week {review.weekNumber} review</CardTitle>
+              <CardTitle>{review.weekLabel} review</CardTitle>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {(

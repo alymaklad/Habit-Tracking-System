@@ -1,13 +1,22 @@
 import type {
   AchievementView,
+  AiProvider,
+  AiStatus,
   AppSettings,
   CalendarBlock,
   CalendarMonthDay,
   DashboardView,
   DifficultyProposal,
+  GoalDraftInput,
+  GoalDraftResult,
+  GoalPlan,
+  GoalPlanProgress,
+  GoalResource,
+  GoalView,
   Habit,
   HabitDraft,
   LocalDate,
+  MindMapNode,
   PerformanceView,
   PersonalRecordView,
   TodoView,
@@ -73,6 +82,24 @@ export interface HabitApi {
     reject(id: number): Promise<void>
   }
 
+  goals: {
+    list(): Promise<GoalView[]>
+    get(id: number): Promise<GoalView | null>
+    /** Runs the planning loop; progress arrives on `on.goalProgress`. Nothing is saved. */
+    draftPlan(input: GoalDraftInput): Promise<GoalDraftResult>
+    commit(input: GoalDraftInput, plan: GoalPlan): Promise<GoalView>
+    close(id: number, outcome: 'achieved' | 'abandoned'): Promise<void>
+    reopen(id: number): Promise<void>
+    updatePlan(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[] }): Promise<void>
+    remove(id: number): Promise<void>
+  }
+
+  ai: {
+    status(): Promise<AiStatus>
+    setProvider(provider: AiProvider): Promise<void>
+    setCredentials(provider: AiProvider, apiKey: string | null, model: string | null): Promise<void>
+  }
+
   settings: {
     get(): Promise<AppSettings>
     save(patch: Partial<AppSettings>): Promise<AppSettings>
@@ -102,6 +129,7 @@ export interface HabitApi {
     syncStatus(cb: (status: SyncStatus) => void): () => void
     dataChanged(cb: () => void): () => void
     toast(cb: (message: ToastMessage) => void): () => void
+    goalProgress(cb: (progress: GoalPlanProgress) => void): () => void
   }
 }
 

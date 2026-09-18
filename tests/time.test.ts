@@ -6,6 +6,7 @@ import {
   formatCountdown,
   formatDuration,
   formatRelative,
+  formatWeekLabel,
   isoWeekNumber,
   localToInstant,
   parseGoogleDue,
@@ -96,14 +97,28 @@ describe('calendar arithmetic', () => {
     expect(weekday('2026-08-23')).toBe(7) // Sunday
   })
 
-  it('starts weeks on Monday', () => {
-    expect(weekStart('2026-08-20')).toBe('2026-08-17')
-    expect(weekStart('2026-08-17')).toBe('2026-08-17')
-    expect(weekStart('2026-08-23')).toBe('2026-08-17')
+  it('starts weeks on Saturday, not the ISO Monday', () => {
+    // This user's week runs Sat–Fri, not the calendar-standard Mon–Sun.
+    expect(weekStart('2026-08-15')).toBe('2026-08-15') // Saturday itself
+    expect(weekStart('2026-08-20')).toBe('2026-08-15') // Thursday, same week
+    expect(weekStart('2026-08-21')).toBe('2026-08-15') // Friday, last day of that week
+    expect(weekStart('2026-08-22')).toBe('2026-08-22') // the next Saturday starts a new week
+    expect(weekStart('2026-08-23')).toBe('2026-08-22') // Sunday, already in the new week
   })
 
   it('reports ISO week numbers', () => {
+    // Kept as a general utility; the app no longer uses it for its own week labels,
+    // since those are Saturday-anchored and an ISO number would describe a different span.
     expect(isoWeekNumber('2026-08-20')).toBe(34)
+  })
+
+  it('formats a week label as a date range', () => {
+    expect(formatWeekLabel('2026-08-15')).toBe('Aug 15–21')
+    expect(formatWeekLabel('2026-08-22')).toBe('Aug 22–28')
+  })
+
+  it('formats a week label that crosses a month boundary', () => {
+    expect(formatWeekLabel('2026-08-29')).toBe('Aug 29 – Sep 4')
   })
 
   it('builds inclusive ranges', () => {

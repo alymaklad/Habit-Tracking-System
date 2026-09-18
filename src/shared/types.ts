@@ -31,6 +31,8 @@ export interface Habit {
   colorKey: string
   googleTasklistId: string | null
   active: boolean
+  /** The goal whose plan created this habit, if any. */
+  goalId: number | null
   createdAt: Iso
 }
 
@@ -193,7 +195,7 @@ export interface DashboardView {
   dayPoints: number
   dayPointsMax: number
   level: LevelInfo
-  weekNumber: number
+  weekLabel: string
 }
 
 // ----------------------------------------------------------------- sync
@@ -282,7 +284,7 @@ export interface AppSettings {
 
 export interface WeeklyReview {
   weekStart: LocalDate
-  weekNumber: number
+  weekLabel: string
   totalMinutes: number
   previousMinutes: number
   improvementPercentage: number | null
@@ -424,7 +426,7 @@ export interface PerformanceHabit {
 
 export interface WeekVerdict {
   weekStart: LocalDate
-  weekNumber: number
+  weekLabel: string
   points: number
   target: number
   met: boolean
@@ -434,7 +436,7 @@ export interface WeekVerdict {
 
 export interface PerformanceView {
   weekStart: LocalDate
-  weekNumber: number
+  weekLabel: string
 
   /** Daily points plus weekly bonuses — the figure the league actually scores. */
   totalPoints: number
@@ -499,13 +501,126 @@ export interface CalendarMonthDay {
   missed: number
 }
 
+// ------------------------------------------------------------------ goals
+
+export type GoalStatus = 'active' | 'achieved' | 'abandoned'
+
+/** What the user types into the wizard. */
+export interface GoalDraftInput {
+  title: string
+  description: string | null
+  targetDate: LocalDate | null
+  /** How much time per week they are willing to give it. */
+  weeklyMinutesBudget: number | null
+}
+
+/** A recurring practice session the plan proposes; becomes a Habit on commit. */
+export interface GoalSession {
+  name: string
+  /** ISO weekday numbers, Monday = 1 … Sunday = 7. */
+  days: number[]
+  scheduledTime: LocalTime
+  targetMinutes: number
+  rationale: string | null
+}
+
+/** A one-off checkpoint; becomes a manual to-do on commit. */
+export interface GoalMilestone {
+  title: string
+  dueDate: LocalDate
+  description: string | null
+}
+
+export interface MindMapNode {
+  id: string
+  parentId: string | null
+  title: string
+}
+
+export interface GoalResource {
+  title: string
+  /** e.g. "course", "book", "podcast", "practice site". */
+  type: string
+  note: string
+  /** Present only when the planner found a real page and the Intervenor confirmed it resolves. */
+  url: string | null
+}
+
+export interface GoalPlan {
+  summary: string
+  sessions: GoalSession[]
+  milestones: GoalMilestone[]
+  mindMap: MindMapNode[]
+  resources: GoalResource[]
+}
+
+/** Which phase of the planning loop is running — shown in the wizard. */
+export type GoalPlanPhase = 'researching' | 'drafting' | 'reviewing' | 'revising'
+
+export interface GoalPlanProgress {
+  phase: GoalPlanPhase
+  iteration: number
+  maxIterations: number
+}
+
+export interface GoalDraftResult {
+  plan: GoalPlan
+  /** How many drafting passes it took. */
+  iterations: number
+  /** Anything the Intervenor could not resolve within the cap — shown to the user. */
+  warnings: string[]
+}
+
+export type AiProvider = 'anthropic' | 'groq'
+
+export interface AiProviderStatus {
+  id: AiProvider
+  label: string
+  hasKey: boolean
+  model: string
+  defaultModel: string
+  keyPlaceholder: string
+  note: string
+}
+
+export interface AiStatus {
+  /** Which provider the planner will use. */
+  provider: AiProvider
+  /** Whether that provider has a key, i.e. whether drafting can run at all. */
+  ready: boolean
+  providers: AiProviderStatus[]
+}
+
+export interface Goal {
+  id: number
+  title: string
+  description: string | null
+  targetDate: LocalDate | null
+  weeklyMinutesBudget: number | null
+  status: GoalStatus
+  mindMap: MindMapNode[]
+  resources: GoalResource[]
+  createdAt: Iso
+  closedAt: Iso | null
+}
+
+/** A goal with the things it spawned, for the Goals screen. */
+export interface GoalView extends Goal {
+  habits: { id: number; name: string; active: boolean; streak: number }[]
+  milestones: { id: number; title: string; date: LocalDate | null; done: boolean; dropped: boolean }[]
+  milestonesDone: number
+  milestonesTotal: number
+  daysToTarget: number | null
+}
+
 // ---------------------------------------------------------------- IPC
 
 /** Channels the main process pushes to the renderer. */
 export const PUSH_CHANNELS = {
   syncStatus: 'push:sync-status',
   dashboard: 'push:dashboard',
-  toast: 'push:toast'
+  toast: 'push:toast',
+  goalProgress: 'push:goal-progress'
 } as const
 
 export interface ToastMessage {

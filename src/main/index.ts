@@ -311,6 +311,7 @@ async function start(): Promise<void> {
           reminderLeadMinutes: 30,
           colorKey: 'violet',
           googleTasklistId: null,
+          goalId: null,
           active: true
         })
         const card = ctx.views.dashboard().cards[0]
@@ -326,10 +327,14 @@ async function start(): Promise<void> {
     }
 
     try {
-      registerIpc(ctx, () => {
-        send(PUSH_CHANNELS.dashboard)
-        updateTray()
-      })
+      registerIpc(
+        ctx,
+        () => {
+          send(PUSH_CHANNELS.dashboard)
+          updateTray()
+        },
+        send
+      )
     } catch (err) {
       startupError = `The app could not start: ${err instanceof Error ? err.message : String(err)}`
     }

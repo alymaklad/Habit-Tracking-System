@@ -9,7 +9,10 @@ npm install
 npm run dev
 ```
 
-The app works completely offline. Google is optional.
+The app works completely offline. Google and the AI planner are optional.
+
+**What it does, screen by screen:** [docs/FEATURES.md](docs/FEATURES.md).
+**The whole idea and a deep technical walkthrough:** [docs/PROJECT.md](docs/PROJECT.md).
 
 ---
 
@@ -98,7 +101,7 @@ npm run verify      # typecheck + tests + both smoke suites
 | Command | What it covers |
 |---|---|
 | `npm run typecheck` | Both projects, strict |
-| `npm test` | 167 unit and integration tests, headless |
+| `npm test` | 289 unit and integration tests, headless |
 | `npm run smoke` | 21 end-to-end checks in the real Electron runtime |
 | `npm run smoke:ui` | Boots the actual window and asserts the UI mounted |
 

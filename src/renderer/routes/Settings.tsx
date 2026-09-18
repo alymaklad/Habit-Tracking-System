@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, NotificationChannel, SyncStatus, ThemeMode } from '@shared/types'
+import type { AiStatus, AppSettings, NotificationChannel, SyncStatus, ThemeMode } from '@shared/types'
 import Screen from '../components/Screen'
 import Icon from '../components/Icon'
 import { Button, Card, CardTitle, ErrorState, Field, Label, Loading, Toggle } from '../components/ui'
@@ -75,6 +75,157 @@ function Row({
       </div>
       {children}
     </div>
+  )
+}
+
+/**
+ * Bring-your-own key per provider, same shape as the Google client id: pasted here,
+ * stored as a settings flag, never shown back once saved. Keys and models are kept per
+ * provider, so switching between them loses nothing.
+ */
+function AiProviderCard() {
+  const [status, setStatus] = useState<AiStatus | null>(null)
+  const [apiKey, setApiKey] = useState('')
+  const [model, setModel] = useState('')
+  const [editing, setEditing] = useState(false)
+
+  const load = (): void => {
+    void window.api.ai.status().then(setStatus)
+  }
+  useEffect(load, [])
+
+  const current = status?.providers.find((p) => p.id === status.provider) ?? null
+  const currentId = current?.id
+  const currentModel = current?.model
+
+  useEffect(() => {
+    if (currentModel !== undefined) setModel(currentModel)
+  }, [currentId, currentModel])
+
+  const showForm = editing || current?.hasKey === false
+
+  return (
+    <Card
+      accent={status?.ready ? 'var(--ok)' : 'var(--line)'}
+      style={{ display: 'flex', flexDirection: 'column', gap: 13 }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <CardTitle>AI planner</CardTitle>
+        {status ? (
+          <span
+            className="display"
+            style={{ fontSize: 11, letterSpacing: '0.1em', color: status.ready ? 'var(--ok)' : 'var(--faint)' }}
+          >
+            {status.ready ? 'READY' : 'NO KEY'}
+          </span>
+        ) : null}
+      </div>
+
+      <span style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--dim)', textWrap: 'pretty' }}>
+        The Goals wizard drafts plans with an LLM using your own API key. Calls are billed to your
+        account with that provider, not to this app — a full draft is a handful of requests. Keys are
+        stored locally and only ever sent to the provider they belong to.
+      </span>
+
+      {status ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Label>Provider</Label>
+          <div style={{ display: 'flex' }}>
+            {status.providers.map((p, i) => {
+              const on = p.id === status.provider
+              return (
+                <button
+                  key={p.id}
+                  onClick={async () => {
+                    await window.api.ai.setProvider(p.id)
+                    setEditing(false)
+                    setApiKey('')
+                    load()
+                  }}
+                  className="display"
+                  style={{
+                    padding: '6px 13px',
+                    fontSize: 10.5,
+                    letterSpacing: '0.1em',
+                    marginLeft: i ? -1 : 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    border: `1px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+                    background: on ? 'var(--accent)' : 'transparent',
+                    color: on ? 'var(--accent-ink)' : 'var(--dim)'
+                  }}
+                >
+                  {p.label.toUpperCase()}
+                  <span
+                    title={p.hasKey ? 'Key saved' : 'No key'}
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: p.hasKey ? 'var(--ok)' : 'var(--line)'
+                    }}
+                  />
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {current ? (
+        showForm ? (
+          <>
+            <Field label={`${current.label} API key`}>
+              <input
+                type="password"
+                value={apiKey}
+                placeholder={current.keyPlaceholder}
+                onChange={(e) => setApiKey(e.target.value)}
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="Model" hint={current.note}>
+              <input value={model} placeholder={current.defaultModel} onChange={(e) => setModel(e.target.value)} />
+            </Field>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                kind="solid"
+                disabled={!apiKey.trim()}
+                onClick={async () => {
+                  await window.api.ai.setCredentials(current.id, apiKey, model || null)
+                  setApiKey('')
+                  setEditing(false)
+                  load()
+                }}
+              >
+                SAVE KEY
+              </Button>
+              {current.hasKey ? <Button onClick={() => setEditing(false)}>CANCEL</Button> : null}
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+              <span style={{ fontSize: 13 }}>Ready to draft plans with {current.label}</span>
+              <span className="num" style={{ fontSize: 10.5, color: 'var(--faint)', fontWeight: 400 }}>
+                {current.model}
+              </span>
+            </div>
+            <Button onClick={() => setEditing(true)}>CHANGE</Button>
+            <Button
+              kind="danger"
+              onClick={async () => {
+                await window.api.ai.setCredentials(current.id, null, null)
+                load()
+              }}
+            >
+              REMOVE
+            </Button>
+          </div>
+        )
+      ) : null}
+    </Card>
   )
 }
 
@@ -262,6 +413,9 @@ export default function Settings({
             </>
           )}
         </Card>
+
+        {/* -------------------------------------------------- AI */}
+        <AiProviderCard />
 
         {/* ------------------------------------------------ sync */}
         <Card style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>

@@ -1,4 +1,4 @@
-import type { SyncStatus, ToastMessage } from '@shared/types'
+import type { AiProvider, AiStatus, SyncStatus, ToastMessage } from '@shared/types'
 import { openDatabase } from './persistence/db'
 import { habitRepo } from './persistence/habitRepo'
 import { occurrenceRepo } from './persistence/occurrenceRepo'
@@ -7,10 +7,14 @@ import { recordRepo } from './persistence/recordRepo'
 import { settingsRepo } from './persistence/settingsRepo'
 import { syncRepo } from './persistence/syncRepo'
 import { todoRepo } from './persistence/todoRepo'
+import { goalRepo } from './persistence/goalRepo'
 import { scheduleService } from './application/scheduleService'
 import { recomputeService } from './application/recomputeService'
 import { habitService } from './application/habitService'
 import { todoService } from './application/todoService'
+import { goalService } from './application/goalService'
+import { anthropicGoalPlanner } from './ai/goalPlanner'
+import { isProvider, PROVIDER_IDS, PROVIDERS } from './ai/providers'
 import { viewService } from './application/viewService'
 import { notificationService } from './application/notificationService'
 import { reminderScheduler } from './application/reminderScheduler'
@@ -51,11 +55,72 @@ export function createContext(opts: ContextOptions) {
   const settings = settingsRepo(db)
   const sync = syncRepo(db)
   const todos = todoRepo(db)
+  const goals = goalRepo(db)
 
   const schedule = scheduleService({ db, habits, occurrences, settings })
   const engine = recomputeService({ db, habits, occurrences, logs, records, settings })
   const habitsApi = habitService({ db, habits, occurrences, logs, records, settings, schedule, engine })
   const todosApi = todoService({ db, todos, occurrences, settings, habits: habitsApi })
+
+  // ------------------------------------------------------------------ AI
+
+  // Same bring-your-own-key shape as the Google client id: a value pasted into Settings
+  // wins over the build-time environment. Keys and models are stored per provider so
+  // switching back and forth does not lose either.
+  const ENV_KEY: Record<AiProvider, string | undefined> = {
+    anthropic: process.env.ANTHROPIC_API_KEY,
+    groq: process.env.GROQ_API_KEY
+  }
+
+  function aiProvider(): AiProvider {
+    const stored = settings.getFlag<string | null>('aiProvider', null)
+    return isProvider(stored) ? stored : 'anthropic'
+  }
+
+  function aiApiKey(provider: AiProvider): string | null {
+    // `anthropicApiKey` predates per-provider keys; keep reading it.
+    const legacy = provider === 'anthropic' ? settings.getFlag<string | null>('anthropicApiKey', null) : null
+    return settings.getFlag<string | null>(`aiKey:${provider}`, null) ?? legacy ?? ENV_KEY[provider] ?? null
+  }
+
+  function aiModel(provider: AiProvider): string {
+    const legacy = provider === 'anthropic' ? settings.getFlag<string | null>('aiModel', null) : null
+    return settings.getFlag<string | null>(`aiModel:${provider}`, null) ?? legacy ?? PROVIDERS[provider].defaultModel
+  }
+
+  function aiStatus(): AiStatus {
+    const provider = aiProvider()
+    return {
+      provider,
+      ready: aiApiKey(provider) !== null,
+      providers: PROVIDER_IDS.map((id) => ({
+        id,
+        label: PROVIDERS[id].label,
+        hasKey: aiApiKey(id) !== null,
+        model: aiModel(id),
+        defaultModel: PROVIDERS[id].defaultModel,
+        keyPlaceholder: PROVIDERS[id].keyPlaceholder,
+        note: PROVIDERS[id].note
+      }))
+    }
+  }
+
+  const goalsApi = goalService({
+    db,
+    goals,
+    habitRepo: habits,
+    todoRepo: todos,
+    settings,
+    habits: habitsApi,
+    todos: todosApi,
+    engine,
+    planner: () => {
+      const provider = aiProvider()
+      const apiKey = aiApiKey(provider)
+      if (!apiKey) throw new Error(`Add a ${PROVIDERS[provider].label} API key in Settings to draft a plan.`)
+      return anthropicGoalPlanner({ ai: PROVIDERS[provider].create(apiKey, aiModel(provider)) })
+    }
+  })
 
   const views = viewService({
     habits,
@@ -105,6 +170,22 @@ export function createContext(opts: ContextOptions) {
   const syncer = taskSyncer({ db, habits, occurrences, logs, sync, tasks })
   const mirror = eventMirror({ habits, occurrences, settings, sync, calendar })
 
+  /**
+   * Fully retires occurrences a narrowed schedule orphaned — both halves of what was
+   * provisioned for them, not just the Google Task.
+   *
+   * The calendar event has to go FIRST: it is looked up by the occurrence's own
+   * `google_event_id`, and `provisioner.removeOrphans` hard-deletes that row. Deleting
+   * the task after the row is gone would silently find nothing to clean up.
+   */
+  async function cleanupOrphanedOccurrences(occurrenceIds: number[]): Promise<void> {
+    if (occurrenceIds.length === 0) return
+    for (const id of occurrenceIds) {
+      await mirror.remove(id).catch(() => undefined)
+    }
+    await provisioner.removeOrphans(occurrenceIds).catch(() => undefined)
+  }
+
   const orchestrator = syncOrchestrator({
     auth,
     provisioner,
@@ -146,11 +227,12 @@ export function createContext(opts: ContextOptions) {
   return {
     // The database handle deliberately stays inside the context: everything outside
     // goes through a repository or a service.
-    repos: { habits, occurrences, logs, records, settings, sync, todos },
+    repos: { habits, occurrences, logs, records, settings, sync, todos, goals },
     schedule,
     engine,
     habits: habitsApi,
     todos: todosApi,
+    goals: goalsApi,
     views,
     notifications,
     reminders,
@@ -163,6 +245,7 @@ export function createContext(opts: ContextOptions) {
     orchestrator,
     credentials,
     bootstrap,
+    cleanupOrphanedOccurrences,
 
     hasCredentials(): boolean {
       return credentials() !== null
@@ -171,6 +254,24 @@ export function createContext(opts: ContextOptions) {
     setCredentials(clientId: string, clientSecret: string | null): void {
       settings.setFlag('googleClientId', clientId.trim() || null)
       settings.setFlag('googleClientSecret', clientSecret?.trim() || null)
+    },
+
+    aiStatus,
+
+    setAiProvider(provider: AiProvider): void {
+      if (!isProvider(provider)) throw new Error('Unknown AI provider')
+      settings.setFlag('aiProvider', provider)
+    },
+
+    setAiCredentials(provider: AiProvider, apiKey: string | null, model: string | null): void {
+      if (!isProvider(provider)) throw new Error('Unknown AI provider')
+      settings.setFlag(`aiKey:${provider}`, apiKey?.trim() || null)
+      settings.setFlag(`aiModel:${provider}`, model?.trim() || null)
+      if (provider === 'anthropic') {
+        // Clear the pre-provider flags so removing the key really removes it.
+        settings.setFlag('anthropicApiKey', null)
+        settings.setFlag('aiModel', null)
+      }
     },
 
     dispose(): void {

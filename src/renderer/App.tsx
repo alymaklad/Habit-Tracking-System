@@ -6,6 +6,7 @@ import { useData } from './hooks/useData'
 import Dashboard from './routes/Dashboard'
 import Todo from './routes/Todo'
 import Habits from './routes/Habits'
+import Goals from './routes/Goals'
 import CalendarRoute from './routes/Calendar'
 import Progress from './routes/Progress'
 import Performance from './routes/Performance'
@@ -74,6 +75,7 @@ export default function App() {
     dashboard: <Dashboard />,
     todo: <Todo />,
     habits: <Habits />,
+    goals: <Goals />,
     calendar: <CalendarRoute />,
     progress: <Progress />,
     performance: <Performance />,

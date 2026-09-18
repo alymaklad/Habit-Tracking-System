@@ -12,9 +12,9 @@ import { scheduleService } from '@main/application/scheduleService'
 import { recomputeService } from '@main/application/recomputeService'
 import { viewService } from '@main/application/viewService'
 
-// Thursday 20 August 2026. The ISO week runs Mon 17 → Sun 23.
+// Thursday 20 August 2026. The user's week runs Sat 15 → Fri 21.
 const NOW = new Date('2026-08-20T17:43:00.000Z')
-const WEEK_START = '2026-08-17'
+const WEEK_START = '2026-08-15'
 
 function harness() {
   const db = new Database(':memory:') as Db
@@ -57,6 +57,7 @@ const draft = (o: Partial<HabitDraft> = {}): HabitDraft => ({
   reminderLeadMinutes: 30,
   colorKey: 'violet',
   googleTasklistId: null,
+  goalId: null,
   active: true,
   ...o
 })
@@ -141,15 +142,15 @@ describe('weekly totals', () => {
 })
 
 describe('day-by-day movement', () => {
-  it('returns Monday to Sunday in order', () => {
+  it('returns Saturday to Friday in order', () => {
     h.habits.create(draft())
     refresh()
     const perf = h.views.performance(undefined, NOW)
     expect(perf.days).toHaveLength(7)
-    expect(perf.days[0]!.date).toBe('2026-08-17')
-    expect(perf.days[0]!.weekday).toBe(1)
-    expect(perf.days[6]!.date).toBe('2026-08-23')
-    expect(perf.days[6]!.weekday).toBe(7)
+    expect(perf.days[0]!.date).toBe('2026-08-15')
+    expect(perf.days[0]!.weekday).toBe(6)
+    expect(perf.days[6]!.date).toBe('2026-08-21')
+    expect(perf.days[6]!.weekday).toBe(5)
   })
 
   it('computes the change against the previous scheduled day', () => {
@@ -160,16 +161,18 @@ describe('day-by-day movement', () => {
     refresh()
 
     const perf = h.views.performance(undefined, NOW)
-    const [mon, tue, wed] = perf.days
+    const mon = perf.days.find((d) => d.date === '2026-08-17')!
+    const tue = perf.days.find((d) => d.date === '2026-08-18')!
+    const wed = perf.days.find((d) => d.date === '2026-08-19')!
 
-    expect(mon!.points).toBe(2)
-    expect(mon!.delta).toBeNull() // nothing before it in the week
+    expect(mon.points).toBe(2)
+    expect(mon.delta).toBeNull() // Sat/Sun before it were never scheduled
 
-    expect(tue!.points).toBe(-1)
-    expect(tue!.delta).toBe(-3) // 2 → −1
+    expect(tue.points).toBe(-1)
+    expect(tue.delta).toBe(-3) // 2 → −1
 
-    expect(wed!.points).toBe(2)
-    expect(wed!.delta).toBe(3) // −1 → 2
+    expect(wed.points).toBe(2)
+    expect(wed.delta).toBe(3) // −1 → 2
   })
 
   it('skips unscheduled days rather than reading them as a collapse', () => {
@@ -320,15 +323,15 @@ describe('habit ranking', () => {
 })
 
 describe('month heatmap', () => {
-  it('returns a six-week grid starting on a Monday', () => {
+  it('returns a six-week grid starting on a Saturday', () => {
     h.habits.create(draft())
     refresh()
     const perf = h.views.performance(undefined, NOW)
 
     expect(perf.monthGrid).toHaveLength(42)
-    expect(perf.monthGrid[0]!.weekday).toBe(1)
-    // August 2026 starts on a Saturday, so the grid opens on Monday 27 July.
-    expect(perf.monthGrid[0]!.date).toBe('2026-07-27')
+    expect(perf.monthGrid[0]!.weekday).toBe(6)
+    // August 2026 opens on a Saturday itself, so the grid needs no lead-in padding.
+    expect(perf.monthGrid[0]!.date).toBe('2026-08-01')
   })
 
   it('marks days outside the month', () => {
@@ -336,10 +339,10 @@ describe('month heatmap', () => {
     refresh()
     const perf = h.views.performance(undefined, NOW)
 
-    expect(perf.monthGrid.find((d) => d.date === '2026-07-27')!.inPeriod).toBe(false)
     expect(perf.monthGrid.find((d) => d.date === '2026-08-01')!.inPeriod).toBe(true)
     expect(perf.monthGrid.find((d) => d.date === '2026-08-31')!.inPeriod).toBe(true)
     expect(perf.monthGrid.find((d) => d.date === '2026-09-01')!.inPeriod).toBe(false)
+    expect(perf.monthGrid.find((d) => d.date === '2026-09-11')!.inPeriod).toBe(false)
   })
 
   it('totals only the days inside the month', () => {
@@ -375,7 +378,7 @@ describe('navigating to another week', () => {
     refresh()
 
     const perf = h.views.performance('2026-08-12', NOW)
-    expect(perf.weekStart).toBe('2026-08-10')
+    expect(perf.weekStart).toBe('2026-08-08')
     expect(perf.basePoints).toBe(4)
   })
 })
@@ -403,12 +406,12 @@ describe('a fresh database stays clean', () => {
     const a = h.habits.create(draft())
     complete(a.id, '2026-08-17')
     refresh()
-    expect(h.records.weekly('2026-08-17')).not.toBeNull()
+    expect(h.records.weekly('2026-08-15')).not.toBeNull()
 
     // Deleting the habit cascades its records away; the week should go with them.
     h.habits.remove(a.id)
     refresh()
-    expect(h.records.weekly('2026-08-17')).toBeNull()
+    expect(h.records.weekly('2026-08-15')).toBeNull()
   })
 })
 
@@ -460,8 +463,8 @@ describe('weekly points target', () => {
     h.settings.save({ weeklyPointsTarget: 3 })
 
     const perf = h.views.performance(undefined, NOW)
-    const current = perf.recentWeeks.find((w) => w.weekStart === '2026-08-17')!
-    const previous = perf.recentWeeks.find((w) => w.weekStart === '2026-08-10')
+    const current = perf.recentWeeks.find((w) => w.weekStart === '2026-08-15')!
+    const previous = perf.recentWeeks.find((w) => w.weekStart === '2026-08-08')
 
     expect(current.inProgress).toBe(true)
     if (previous) expect(previous.inProgress).toBe(false)

@@ -242,5 +242,35 @@ CREATE TABLE habit_subtask_template (
 );
 CREATE INDEX idx_subtask_template_habit ON habit_subtask_template (habit_id);
 `
+  },
+  {
+    id: 4,
+    name: 'goal planning',
+    sql: `
+-- A goal is a front door onto habits and to-dos, not a schedule of its own. The
+-- wizard turns an AI-drafted plan into ordinary habit rows (the recurring sessions)
+-- and ordinary manual to-dos (the milestones); only the mind map and the resource
+-- list have nowhere else to live, so they stay here as JSON.
+CREATE TABLE goal (
+  id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+  title                   TEXT    NOT NULL,
+  description             TEXT,
+  target_date             TEXT,                       -- LOCAL YYYY-MM-DD, optional
+  weekly_minutes_budget   INTEGER,
+  status                  TEXT    NOT NULL DEFAULT 'active'
+                          CHECK (status IN ('active', 'achieved', 'abandoned')),
+  mind_map_json           TEXT    NOT NULL DEFAULT '[]',
+  resources_json          TEXT    NOT NULL DEFAULT '[]',
+  created_at              TEXT    NOT NULL,
+  closed_at               TEXT
+);
+
+-- SET NULL, never CASCADE: deleting a goal must not erase the history of the
+-- habits it created, only the link back to it.
+ALTER TABLE habit ADD COLUMN goal_id INTEGER REFERENCES goal (id) ON DELETE SET NULL;
+ALTER TABLE todo  ADD COLUMN goal_id INTEGER REFERENCES goal (id) ON DELETE SET NULL;
+CREATE INDEX idx_habit_goal ON habit (goal_id) WHERE goal_id IS NOT NULL;
+CREATE INDEX idx_todo_goal  ON todo  (goal_id) WHERE goal_id IS NOT NULL;
+`
   }
 ]

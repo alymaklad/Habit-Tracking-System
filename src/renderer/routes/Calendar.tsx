@@ -3,7 +3,7 @@ import Screen from '../components/Screen'
 import Icon from '../components/Icon'
 import { Button, Label } from '../components/ui'
 import { useData } from '../hooks/useData'
-import { addDays, duration, mondayOf, STATUS_COLOR, toLocalDate } from '../lib/format'
+import { addDays, duration, saturdayOf, STATUS_COLOR, toLocalDate } from '../lib/format'
 
 const HOUR_FROM = 6
 const HOUR_TO = 23
@@ -19,8 +19,22 @@ const PX_PER_HOUR = 34
 export default function CalendarRoute() {
   const [anchor, setAnchor] = useState(() => toLocalDate(new Date()))
   const [view, setView] = useState<'week' | 'month'>('week')
+  const [busy, setBusy] = useState<Set<number>>(new Set())
 
-  const weekStart = mondayOf(anchor)
+  const toggle = async (occurrenceId: number, done: boolean): Promise<void> => {
+    setBusy((prev) => new Set(prev).add(occurrenceId))
+    try {
+      await window.api.occurrence.setCompleted(occurrenceId, !done)
+    } finally {
+      setBusy((prev) => {
+        const next = new Set(prev)
+        next.delete(occurrenceId)
+        return next
+      })
+    }
+  }
+
+  const weekStart = saturdayOf(anchor)
   const weekEnd = addDays(weekStart, 6)
   const today = toLocalDate(new Date())
 
@@ -84,7 +98,7 @@ export default function CalendarRoute() {
       {view === 'month' ? (
         <div style={{ padding: '18px 26px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4 }}>
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+            {['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((d) => (
               <div key={d} className="label" style={{ textAlign: 'center', paddingBottom: 6 }}>
                 {d}
               </div>
@@ -213,11 +227,15 @@ export default function CalendarRoute() {
                       const [hh, mm] = b.scheduledTime.split(':').map(Number)
                       const top = ((hh ?? 0) - HOUR_FROM + (mm ?? 0) / 60) * PX_PER_HOUR
                       const height = Math.max(14, (b.targetMinutes / 60) * PX_PER_HOUR - 2)
+                      const done = b.status === 'complete'
                       const color = b.timerRunning ? 'var(--accent)' : STATUS_COLOR[b.status]
+                      const isBusy = busy.has(b.occurrenceId)
                       return (
                         <div
                           key={b.occurrenceId}
-                          title={`${b.name} · ${b.scheduledTime} · ${duration(b.targetMinutes)}`}
+                          role="button"
+                          title={`${b.name} · ${b.scheduledTime} · ${duration(b.targetMinutes)} · click to ${done ? 'undo' : 'mark complete'}`}
+                          onClick={() => !isBusy && void toggle(b.occurrenceId, done)}
                           style={{
                             position: 'absolute',
                             left: 2,
@@ -226,12 +244,18 @@ export default function CalendarRoute() {
                             height,
                             overflow: 'hidden',
                             padding: '2px 5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
                             borderLeft: `2px solid ${color}`,
                             background: `color-mix(in oklab, ${color} 20%, transparent)`,
                             color,
-                            boxShadow: b.timerRunning ? '0 0 14px -4px var(--accent)' : 'none'
+                            boxShadow: b.timerRunning ? '0 0 14px -4px var(--accent)' : 'none',
+                            cursor: isBusy ? 'default' : 'pointer',
+                            opacity: isBusy ? 0.5 : 1
                           }}
                         >
+                          {done ? <Icon name="check" size={9} strokeWidth={2.4} /> : null}
                           <span
                             className="display"
                             style={{ fontSize: 10, whiteSpace: 'nowrap', letterSpacing: '0.04em' }}

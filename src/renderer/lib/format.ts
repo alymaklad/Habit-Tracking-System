@@ -97,9 +97,13 @@ export function addDays(date: string, n: number): string {
   return toLocalDate(d)
 }
 
-export function mondayOf(date: string): string {
+/**
+ * The Saturday that starts the week containing `date` — mirrors the backend's
+ * `weekStart()`. This user's week runs Sat–Fri, not the calendar-standard Mon–Sun.
+ */
+export function saturdayOf(date: string): string {
   const d = new Date(`${date}T12:00:00`)
-  const wd = (d.getDay() + 6) % 7
+  const wd = (d.getDay() + 1) % 7 // days since Saturday: Sat=0, Sun=1, ..., Fri=6
   d.setDate(d.getDate() - wd)
   return toLocalDate(d)
 }

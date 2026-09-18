@@ -60,10 +60,15 @@ export function todoService(deps: {
 
     // ------------------------------------------------------------ manual
 
-    addManual(title: string, date?: LocalDate, now: Date = new Date()): number {
+    addManual(
+      title: string,
+      date?: LocalDate,
+      now: Date = new Date(),
+      opts: { notes?: string | null; goalId?: number | null } = {}
+    ): number {
       const trimmed = title.trim()
       if (!trimmed) throw new Error('A to-do needs a title')
-      return todos.addManual(trimmed, date ?? today(now))
+      return todos.addManual(trimmed, date ?? today(now), opts.notes ?? null, opts.goalId ?? null)
     },
 
     /**

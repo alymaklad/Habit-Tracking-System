@@ -6,6 +6,7 @@ export type Route =
   | 'dashboard'
   | 'todo'
   | 'habits'
+  | 'goals'
   | 'calendar'
   | 'progress'
   | 'performance'
@@ -19,6 +20,7 @@ const NAV: { key: Route; label: string; icon: Parameters<typeof Icon>[0]['name']
     { key: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { key: 'todo', label: 'To-do', icon: 'todo' },
     { key: 'habits', label: 'Habits', icon: 'habits' },
+    { key: 'goals', label: 'Goals', icon: 'goal' },
     { key: 'calendar', label: 'Calendar', icon: 'calendar' },
     { key: 'progress', label: 'Progress', icon: 'progress' },
     { key: 'performance', label: 'Performance', icon: 'performance' },

@@ -66,6 +66,7 @@ const draft = (o: Partial<HabitDraft> = {}): HabitDraft => ({
   reminderLeadMinutes: null,
   colorKey: 'violet',
   googleTasklistId: null,
+  goalId: null,
   active: true,
   ...o
 })
@@ -102,7 +103,7 @@ describe('notification channels', () => {
     h.settings.save({ notificationsEnabled: false })
     await h.notifications.streakAlive(6)
     await h.notifications.completed('German', 15)
-    await h.notifications.weeklyReviewReady(8)
+    await h.notifications.weeklyReviewReady('Aug 22–28')
     expect(h.toasts).toHaveLength(0)
     expect(h.pushed).toHaveLength(0)
   })
@@ -113,7 +114,7 @@ describe('notification channels', () => {
     await h.notifications.streakAlive(6)
     expect(h.toasts).toHaveLength(0)
 
-    await h.notifications.weeklyReviewReady(8)
+    await h.notifications.weeklyReviewReady('Aug 22–28')
     expect(h.toasts).toHaveLength(1)
   })
 

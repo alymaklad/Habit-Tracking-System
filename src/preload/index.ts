@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { PUSH_CHANNELS, type SyncStatus, type ToastMessage } from '../shared/types'
+import {
+  PUSH_CHANNELS,
+  type GoalPlanProgress,
+  type SyncStatus,
+  type ToastMessage
+} from '../shared/types'
 import type { HabitApi } from '../shared/api'
 
 /**
@@ -69,6 +74,23 @@ const api: HabitApi = {
     reject: (id) => invoke('proposal:reject', id)
   },
 
+  goals: {
+    list: () => invoke('goals:list'),
+    get: (id) => invoke('goals:get', id),
+    draftPlan: (input) => invoke('goals:draftPlan', input),
+    commit: (input, plan) => invoke('goals:commit', input, plan),
+    close: (id, outcome) => invoke('goals:close', id, outcome),
+    reopen: (id) => invoke('goals:reopen', id),
+    updatePlan: (id, patch) => invoke('goals:updatePlan', id, patch),
+    remove: (id) => invoke('goals:remove', id)
+  },
+
+  ai: {
+    status: () => invoke('ai:status'),
+    setProvider: (provider) => invoke('ai:setProvider', provider),
+    setCredentials: (provider, apiKey, model) => invoke('ai:setCredentials', provider, apiKey, model)
+  },
+
   settings: {
     get: () => invoke('settings:get'),
     save: (patch) => invoke('settings:save', patch),
@@ -97,7 +119,8 @@ const api: HabitApi = {
   on: {
     syncStatus: (cb) => subscribe<SyncStatus>(PUSH_CHANNELS.syncStatus, cb),
     dataChanged: (cb) => subscribe<void>(PUSH_CHANNELS.dashboard, () => cb()),
-    toast: (cb) => subscribe<ToastMessage>(PUSH_CHANNELS.toast, cb)
+    toast: (cb) => subscribe<ToastMessage>(PUSH_CHANNELS.toast, cb),
+    goalProgress: (cb) => subscribe<GoalPlanProgress>(PUSH_CHANNELS.goalProgress, cb)
   }
 }
 

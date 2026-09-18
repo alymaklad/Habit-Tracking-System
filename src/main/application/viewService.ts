@@ -25,7 +25,7 @@ import {
   addDays,
   daysInMonth,
   formatDuration,
-  isoWeekNumber,
+  formatWeekLabel,
   monthStart,
   todayIn,
   weekStart,
@@ -116,7 +116,7 @@ export function viewService(deps: {
       dayPoints,
       dayPointsMax,
       level: levelInfo(records.totalXp()),
-      weekNumber: isoWeekNumber(date)
+      weekLabel: formatWeekLabel(weekStart(date))
     }
   }
 
@@ -144,9 +144,8 @@ export function viewService(deps: {
   function calendarMonth(anchor: LocalDate): CalendarMonthDay[] {
     const first = monthStart(anchor)
     const total = daysInMonth(anchor)
-    // Pad back to the Monday of the week the 1st falls in.
-    const lead = weekday(first) - 1
-    const gridStart = addDays(first, -lead)
+    // Pad back to the Saturday of the week the 1st falls in.
+    const gridStart = weekStart(first)
 
     const out: CalendarMonthDay[] = []
     for (let i = 0; i < 42; i++) {
@@ -169,7 +168,9 @@ export function viewService(deps: {
 
   function progress(weeks = 8, now: Date = new Date()): ProgressView {
     const all = records.weeklyAll(weeks)
-    const label = (ws: LocalDate) => `W${isoWeekNumber(ws)}`
+    // Chart x-axis ticks: a bare day-of-month is enough space-wise; the card's
+    // headline above each chart already carries the broader context.
+    const label = (ws: LocalDate) => ws.slice(8)
 
     const hoursPerWeek: SeriesPoint[] = all.map((w) => ({
       label: label(w.weekStart),
@@ -473,7 +474,7 @@ export function viewService(deps: {
       const inProgress = start >= thisWeekStart
       recentWeeks.push({
         weekStart: start,
-        weekNumber: isoWeekNumber(start),
+        weekLabel: formatWeekLabel(start),
         points,
         target: weeklyTarget,
         met: weeklyTarget > 0 && points >= weeklyTarget,
@@ -493,11 +494,11 @@ export function viewService(deps: {
       }
     }
 
-    // Month grid: pad back to Monday so the heatmap lines up with weekday columns.
+    // Month grid: pad back to Saturday so the heatmap lines up with the week columns.
     const monthAnchor = anchor ?? today
     const first = monthStart(monthAnchor)
     const last = addDays(first, daysInMonth(monthAnchor) - 1)
-    const gridStart = addDays(first, -(weekday(first) - 1))
+    const gridStart = weekStart(first)
     const gridEnd = addDays(gridStart, 41)
     const monthGrid = daysBetween(gridStart, gridEnd, (d) => d >= first && d <= last)
     const monthPoints = monthGrid.filter((d) => d.inPeriod).reduce((s, d) => s + d.points, 0)
@@ -505,7 +506,7 @@ export function viewService(deps: {
 
     return {
       weekStart: ws,
-      weekNumber: isoWeekNumber(ws),
+      weekLabel: formatWeekLabel(ws),
       totalPoints,
       basePoints,
       bonusPoints: totalPoints - basePoints,
@@ -604,7 +605,7 @@ export function viewService(deps: {
 
     return {
       weekStart: ws,
-      weekNumber: isoWeekNumber(ws),
+      weekLabel: formatWeekLabel(ws),
       totalMinutes: week.totalMinutes,
       previousMinutes: prev?.totalMinutes ?? 0,
       improvementPercentage: week.improvementPercentage,

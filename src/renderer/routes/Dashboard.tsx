@@ -212,7 +212,7 @@ export default function Dashboard() {
   return (
     <Screen
       title={dayLabel(data.date)}
-      subtitle={`Week ${data.weekNumber} · Day score ${data.dayPoints} / ${data.dayPointsMax}`}
+      subtitle={`${data.weekLabel} · Day score ${data.dayPoints} / ${data.dayPointsMax}`}
       actions={
         <div style={{ flexGrow: 1, maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>

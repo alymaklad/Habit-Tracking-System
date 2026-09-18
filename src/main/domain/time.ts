@@ -78,13 +78,34 @@ export function weekday(date: LocalDate): number {
   return DateTime.fromISO(date, { zone: 'utc' }).weekday
 }
 
-/** Monday of the ISO week containing `date`. */
+/**
+ * The Saturday that starts the user's week containing `date`.
+ *
+ * Deliberately not the ISO week (Monday). This user's week runs Sat–Fri — Saturday is
+ * the first workday after Friday's day off — so every weekly aggregation (point
+ * totals, the weekly review, the weekly target) anchors here instead of the
+ * calendar-standard Monday.
+ */
 export function weekStart(date: LocalDate): LocalDate {
-  return DateTime.fromISO(date, { zone: 'utc' }).startOf('week').toISODate()!
+  const back = (weekday(date) - 6 + 7) % 7
+  return addDays(date, -back)
 }
 
+/** True ISO week number (Monday-based). Kept as a general utility, not used for the
+ *  app's own week labels — those are Saturday-anchored and an ISO number would no
+ *  longer describe the same span. */
 export function isoWeekNumber(date: LocalDate): number {
   return DateTime.fromISO(date, { zone: 'utc' }).weekNumber
+}
+
+/** "Aug 22–28", or "Aug 29 – Sep 4" when the week crosses a month (or year) boundary. */
+export function formatWeekLabel(start: LocalDate): string {
+  const end = addDays(start, 6)
+  const s = DateTime.fromISO(start, { zone: 'utc' })
+  const e = DateTime.fromISO(end, { zone: 'utc' })
+  if (s.month === e.month) return `${s.toFormat('LLL')} ${s.day}–${e.day}`
+  const yearSuffix = s.year === e.year ? '' : `, ${e.year}`
+  return `${s.toFormat('LLL')} ${s.day} – ${e.toFormat('LLL')} ${e.day}${yearSuffix}`
 }
 
 export function monthStart(date: LocalDate): LocalDate {

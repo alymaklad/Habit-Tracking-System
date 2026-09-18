@@ -113,11 +113,11 @@ export function notificationService(deps: {
       })
     },
 
-    weeklyReviewReady(weekNumber: number): Promise<void> {
+    weeklyReviewReady(weekLabel: string): Promise<void> {
       return deliver({
         kind: 'weeklyReview',
         title: 'Your weekly review is ready',
-        body: `Week ${weekNumber} is summarised and waiting.`,
+        body: `${weekLabel} is summarised and waiting.`,
         priority: 3,
         tags: ['bar_chart']
       })

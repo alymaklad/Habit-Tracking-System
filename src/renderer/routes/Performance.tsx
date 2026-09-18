@@ -4,9 +4,15 @@ import Screen from '../components/Screen'
 import Icon from '../components/Icon'
 import { Bar, Button, Card, CardTitle, Empty, ErrorState, Label, Loading, Tier } from '../components/ui'
 import { useData } from '../hooks/useData'
-import { addDays, duration, mondayOf, toLocalDate } from '../lib/format'
+import { addDays, duration, saturdayOf, toLocalDate } from '../lib/format'
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+// Saturday-first, matching the backend's week anchor.
+const WEEKDAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+
+/** Maps an ISO weekday (1=Mon..7=Sun) to its column in the Saturday-first WEEKDAYS. */
+function weekdayIndex(isoWeekday: number): number {
+  return (isoWeekday - 6 + 7) % 7
+}
 
 /** Signed number with an explicit sign, so a gain never reads as a bare figure. */
 function signed(n: number): string {
@@ -110,7 +116,7 @@ function DayChart({ days }: { days: PerformanceDay[] }) {
               {d.scheduled === 0 ? '·' : signed(d.points)}
             </span>
             <span style={{ fontSize: 9.5, letterSpacing: '0.08em', color: 'var(--faint)' }}>
-              {WEEKDAYS[d.weekday - 1]}
+              {WEEKDAYS[weekdayIndex(d.weekday)]}
             </span>
             <DeltaBadge value={d.delta} />
           </div>
@@ -373,7 +379,7 @@ function TargetCard({ data, onChanged }: { data: PerformanceView; onChanged: () 
               return (
                 <div
                   key={w.weekStart}
-                  title={`Week ${w.weekNumber} · ${w.points} of ${w.target} points · ${
+                  title={`${w.weekLabel} · ${w.points} of ${w.target} points · ${
                     w.inProgress ? 'in progress' : w.met ? 'met' : 'missed'
                   }`}
                   style={{
@@ -395,7 +401,7 @@ function TargetCard({ data, onChanged }: { data: PerformanceView; onChanged: () 
                     {w.points}
                   </span>
                   <span style={{ fontSize: 9, letterSpacing: '0.06em', color: 'var(--faint)' }}>
-                    W{w.weekNumber}
+                    {w.weekStart.slice(8)}
                   </span>
                 </div>
               )
@@ -440,7 +446,7 @@ export default function Performance() {
   // a placeholder — it shows what is coming and what has already been missed.
   if (data.habits.length === 0 && !data.days.some((d) => d.scheduled > 0)) {
     return (
-      <Screen title="Performance" subtitle={`Week ${data.weekNumber}`}>
+      <Screen title="Performance" subtitle={data.weekLabel}>
         <Empty
           title="Nothing scheduled this week"
           body="Create a habit and pick the days it runs on. This screen then fills in: the week's total, how each day moved against the one before it, which habit is carrying you and which is slipping."
@@ -452,7 +458,7 @@ export default function Performance() {
   return (
     <Screen
       title="Performance"
-      subtitle={`Week ${data.weekNumber} · ${data.weekStart} to ${addDays(data.weekStart, 6)}`}
+      subtitle={data.weekLabel}
       actions={
         <div style={{ display: 'flex', gap: 6 }}>
           <Button onClick={() => setAnchor(addDays(anchor, -7))} title="Previous week">
@@ -462,7 +468,7 @@ export default function Performance() {
           <Button
             onClick={() => setAnchor(addDays(anchor, 7))}
             title="Next week"
-            disabled={mondayOf(anchor) >= mondayOf(toLocalDate(new Date()))}
+            disabled={saturdayOf(anchor) >= saturdayOf(toLocalDate(new Date()))}
           >
             <Icon name="chevronRight" size={12} strokeWidth={2.2} />
           </Button>
@@ -519,7 +525,7 @@ export default function Performance() {
             </span>
             <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>
               {data.bestDay
-                ? `${WEEKDAYS[data.bestDay.weekday - 1]} · ${data.bestDay.completed}/${data.bestDay.scheduled} complete`
+                ? `${WEEKDAYS[weekdayIndex(data.bestDay.weekday)]} · ${data.bestDay.completed}/${data.bestDay.scheduled} complete`
                 : 'Nothing scheduled'}
             </span>
           </Card>
@@ -538,7 +544,7 @@ export default function Performance() {
             </span>
             <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>
               {data.worstDay
-                ? `${WEEKDAYS[data.worstDay.weekday - 1]} · ${data.worstDay.completed}/${data.worstDay.scheduled} complete`
+                ? `${WEEKDAYS[weekdayIndex(data.worstDay.weekday)]} · ${data.worstDay.completed}/${data.worstDay.scheduled} complete`
                 : 'Nothing scheduled'}
             </span>
           </Card>

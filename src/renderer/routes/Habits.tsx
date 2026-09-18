@@ -20,6 +20,7 @@ const blank = (): HabitDraft => ({
   reminderLeadMinutes: null,
   colorKey: 'violet',
   googleTasklistId: null,
+  goalId: null,
   active: true
 })
 
@@ -35,6 +36,7 @@ const toDraft = (h: Habit): HabitDraft => ({
   reminderLeadMinutes: h.reminderLeadMinutes,
   colorKey: h.colorKey,
   googleTasklistId: h.googleTasklistId,
+  goalId: h.goalId,
   active: h.active
 })
 
