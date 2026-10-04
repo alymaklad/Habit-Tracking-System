@@ -10,11 +10,11 @@ const { existsSync, readFileSync, rmSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 
 const stamp = Date.now()
-const reportPath = join(tmpdir(), `ahl-ui-check-${stamp}.json`)
+const reportPath = join(tmpdir(), `khatwa-ui-check-${stamp}.json`)
 // An isolated profile, for two reasons: the check must never read or write the real
 // habits database, and a separate userData directory gets its own single-instance
 // lock — otherwise this silently exits the moment the app is already open.
-const profileDir = join(tmpdir(), `ahl-ui-profile-${stamp}`)
+const profileDir = join(tmpdir(), `khatwa-ui-profile-${stamp}`)
 
 const electron = require('electron')
 

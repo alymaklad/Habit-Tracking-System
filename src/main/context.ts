@@ -27,6 +27,8 @@ import { reminderScheduler } from './application/reminderScheduler'
 import { pushRelay } from './platform/pushRelay'
 import { tokenVault } from './google/tokenVault'
 import { authService, type AuthCredentials } from './google/authService'
+import { accountService } from './account/accountService'
+import { sessionVault } from './account/sessionVault'
 import { tasksClient } from './google/tasksClient'
 import { calendarClient } from './google/calendarClient'
 import { taskProvisioner } from './sync/taskProvisioner'
@@ -44,6 +46,14 @@ export interface ContextOptions {
   onSyncStatus: (status: SyncStatus) => void
   onToast: (message: ToastMessage) => void
   onDataChanged: () => void
+  /**
+   * The app's own Google OAuth client (a "Desktop app" client), built into the release.
+   * Google does not treat a desktop client's secret as confidential — PKCE protects the
+   * exchange — so users only ever see "Link Google Calendar".
+   */
+  googleClient?: { clientId?: string; clientSecret?: string }
+  /** Neon Auth, for Khatwa accounts. Without a URL the app runs with no accounts. */
+  account?: { authUrl?: string; origin?: string }
 }
 
 /**
@@ -174,17 +184,20 @@ export function createContext(opts: ContextOptions) {
   const vault = tokenVault(sync)
 
   function credentials(): AuthCredentials | null {
-    // A client id pasted into Settings wins over the build-time environment, so a user
-    // can bring their own Cloud project without rebuilding.
-    const stored = settings.getFlag<string | null>('googleClientId', null)
-    const storedSecret = settings.getFlag<string | null>('googleClientSecret', null)
-    const clientId = stored ?? process.env.GOOGLE_CLIENT_ID ?? ''
-    const clientSecret = storedSecret ?? process.env.GOOGLE_CLIENT_SECRET ?? undefined
+    // Built into the release; the process environment is only a fallback for development.
+    const clientId = opts.googleClient?.clientId || process.env.GOOGLE_CLIENT_ID || ''
+    const clientSecret = opts.googleClient?.clientSecret || process.env.GOOGLE_CLIENT_SECRET || undefined
     if (!clientId) return null
     return clientSecret ? { clientId, clientSecret } : { clientId }
   }
 
   const auth = authService({ vault, sync, credentials })
+  const account = accountService({
+    authUrl: opts.account?.authUrl || process.env.NEON_AUTH_URL || null,
+    origin: opts.account?.origin || process.env.NEON_AUTH_ORIGIN || null,
+    store: sessionVault(settings),
+    googleIdToken: () => auth.identityToken()
+  })
   const tasks = tasksClient({ auth })
   const calendar = calendarClient({ auth })
 
@@ -270,13 +283,10 @@ export function createContext(opts: ContextOptions) {
     bootstrap,
     cleanupOrphanedOccurrences,
 
+    account,
+
     hasCredentials(): boolean {
       return credentials() !== null
-    },
-
-    setCredentials(clientId: string, clientSecret: string | null): void {
-      settings.setFlag('googleClientId', clientId.trim() || null)
-      settings.setFlag('googleClientSecret', clientSecret?.trim() || null)
     },
 
     aiStatus,

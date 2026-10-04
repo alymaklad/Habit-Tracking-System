@@ -1,6 +1,8 @@
 import type {
   AchievementView,
   AiProvider,
+  AccountStatus,
+  AccountUser,
   AiStatus,
   AppSettings,
   CalendarBlock,
@@ -153,6 +155,14 @@ export interface HabitApi {
     remove(id: number): Promise<void>
   }
 
+  account: {
+    status(): Promise<AccountStatus>
+    signUp(name: string, email: string, password: string): Promise<AccountUser>
+    signIn(email: string, password: string): Promise<AccountUser>
+    signInWithGoogle(): Promise<AccountUser>
+    signOut(): Promise<void>
+  }
+
   ai: {
     status(): Promise<AiStatus>
     setProvider(provider: AiProvider): Promise<void>
@@ -168,7 +178,6 @@ export interface HabitApi {
   google: {
     status(): Promise<SyncStatus>
     hasCredentials(): Promise<boolean>
-    setCredentials(clientId: string, clientSecret: string | null): Promise<void>
     connect(): Promise<{ ok: boolean; error?: string }>
     disconnect(): Promise<void>
     syncNow(): Promise<SyncStatus>

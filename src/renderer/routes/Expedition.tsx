@@ -96,7 +96,8 @@ function Describe({
   onBegin: () => void
   onCancel: () => void
 }) {
-  const { navigate } = useShell()
+  const { navigate, account, accountsEnabled } = useShell()
+  const guest = accountsEnabled && !account
   const [anchorDraft, setAnchorDraft] = useState('')
   const now = today()
   const horizonDays = target ? daysBetween(now, target) : null
@@ -140,13 +141,19 @@ function Describe({
         ) : null}
         {error ? <Alert>{error}</Alert> : null}
         {ai && !ai.ready ? (
-          <Alert tone="ochre">
-            The cartographer needs {provider ? `a ${provider.label}` : 'an'} API key before it can chart a trail.{' '}
-            <button className="underline font-semibold" onClick={() => navigate({ name: 'settings' })}>
-              Add one in Settings → AI planner
-            </button>
-            .
-          </Alert>
+          guest ? (
+            <Alert tone="ochre">
+              The planner isn’t available to guests in this version yet. Create an account to use it with your own AI key.
+            </Alert>
+          ) : (
+            <Alert tone="ochre">
+              The cartographer needs {provider ? `${/^[aeiou]/i.test(provider.label) ? 'an' : 'a'} ${provider.label}` : 'an'} API key before it can chart a trail.{' '}
+              <button className="underline font-semibold" onClick={() => navigate({ name: 'settings' })}>
+                Add one in Settings → AI planner
+              </button>
+              .
+            </Alert>
+          )
         ) : null}
 
         <div className="flex flex-col gap-3">
@@ -970,7 +977,7 @@ function Review({
 // ---------------------------------------------------------------- wizard
 
 export default function Expedition({ resume }: { resume?: boolean }) {
-  const { navigate, toast } = useShell()
+  const { navigate, toast, requireAccount } = useShell()
   const [step, setStep] = useState<Step>('describe')
   const [title, setTitle] = useState('')
   const [story, setStory] = useState('')
@@ -1061,6 +1068,8 @@ export default function Expedition({ resume }: { resume?: boolean }) {
 
   const seal = async (): Promise<void> => {
     if (!plan) return
+    // Trying the planner needs no account; keeping what it made does.
+    if (!(await requireAccount('Create an account to save your mountain', 'Your plan stays exactly as it is — it is saved the moment you are in.'))) return
     setError(null)
     setBusy(true)
     try {

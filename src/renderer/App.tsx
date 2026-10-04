@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { CalendarDays, CircleCheck, Search, TriangleAlert, X } from 'lucide-react'
-import type { AppSettings, SyncStatus, ToastMessage } from '@shared/types'
+import type { AccountStatus, AccountUser, AppSettings, SyncStatus, ToastMessage } from '@shared/types'
 import { SyncDetailsPanel } from './components/SyncStatus'
 import { useData } from './hooks/useData'
 import { initial } from './lib/khatwa'
@@ -25,6 +25,9 @@ import LetGo from './routes/LetGo'
 import Ceremony from './routes/Ceremony'
 import Journal from './routes/Journal'
 import ActiveSession from './khatwa/ActiveSession'
+import { AccountDialog, Welcome } from './khatwa/account'
+import { Btn, Loading } from './khatwa/ui'
+import emblem from './assets/emblem.png'
 
 type Toast = ToastMessage & { id: number }
 
@@ -35,6 +38,10 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [session, setSession] = useState<number | null>(null)
+  const [account, setAccount] = useState<AccountStatus | null>(null)
+  /** Trying the planner before creating an account. */
+  const [guest, setGuest] = useState(false)
+  const [asking, setAsking] = useState<{ reason: string; detail?: string; startWith?: 'sign-in' | 'sign-up'; resolve: (ok: boolean) => void } | null>(null)
 
   const { data: dashboard } = useData(() => window.api.view.dashboard(), [])
   const { data: settings, refetch: refetchSettings } = useData<AppSettings>(() => window.api.settings.get(), [])
@@ -52,6 +59,13 @@ export default function App() {
   }, [])
 
   useEffect(() => window.api.on.toast(pushToast), [pushToast])
+
+  useEffect(() => {
+    window.api.account
+      .status()
+      .then(setAccount)
+      .catch(() => setAccount({ configured: true, user: null, offline: true }))
+  }, [])
 
   // Theme is a document-level attribute so the token blocks switch wholesale.
   useEffect(() => {
@@ -82,9 +96,34 @@ export default function App() {
   }, [])
 
   const navigate = useCallback((next: Route) => {
+    // A guest only has the planner; leaving it goes back to the welcome screen.
+    if (guest && !account?.user && next.name !== 'expedition') setGuest(false)
     setRoute(next)
     setSyncOpen(false)
     document.querySelector('.kh-scroll')?.scrollTo({ top: 0 })
+  }, [guest, account?.user])
+
+  const signedIn = useCallback(
+    (user: AccountUser) => {
+      setAccount((a) => ({ configured: true, offline: false, ...a, user }))
+      setGuest(false)
+      // Greet them by name from the start, unless they already chose one.
+      if (!settings?.displayName && user.name) void window.api.settings.save({ displayName: user.name }).then(refetchSettings)
+    },
+    [settings?.displayName, refetchSettings]
+  )
+
+  const requireAccount = useCallback(
+    (reason: string, detail?: string, startWith?: 'sign-in' | 'sign-up'): Promise<boolean> =>
+      !account?.configured || account.user ? Promise.resolve(true) : new Promise((resolve) => setAsking({ reason, detail, startWith, resolve })),
+    [account]
+  )
+
+  const signOut = useCallback(async () => {
+    await window.api.account.signOut()
+    setAccount((a) => (a ? { ...a, user: null } : a))
+    setGuest(false)
+    setRoute({ name: 'today' })
   }, [])
 
   const reconnect = useCallback(async () => {
@@ -99,9 +138,13 @@ export default function App() {
       settings: settings ?? null,
       level: dashboard?.level ?? null,
       toast: (kind, title, body) => pushToast({ kind, title, body }),
-      openSession: setSession
+      openSession: setSession,
+      account: account?.user ?? null,
+      accountsEnabled: account?.configured ?? false,
+      requireAccount,
+      signOut
     }),
-    [navigate, settings, dashboard?.level, pushToast]
+    [navigate, settings, dashboard?.level, pushToast, account?.user, account?.configured, requireAccount, signOut]
   )
 
   const displayName = settings?.displayName ?? ''
@@ -144,6 +187,64 @@ export default function App() {
         return <Settings status={status} onSettingsChanged={refetchSettings} />
     }
   })()
+
+  const accountDialog = asking ? (
+    <AccountDialog
+      reason={asking.reason}
+      startWith={asking.startWith}
+      onDone={(user) => {
+        signedIn(user)
+        asking.resolve(true)
+        setAsking(null)
+      }}
+      onClose={() => {
+        asking.resolve(false)
+        setAsking(null)
+      }}
+    >
+      {asking.detail}
+    </AccountDialog>
+  ) : null
+
+  if (!account) return <Loading label="Opening Khatwa…" />
+
+  if (account.configured && !account.user && !guest) {
+    return (
+      <Welcome
+        onSignedIn={signedIn}
+        onTryPlanner={() => {
+          setGuest(true)
+          setRoute({ name: 'expedition' })
+        }}
+      />
+    )
+  }
+
+  if (account.configured && !account.user) {
+    return (
+      <ShellContext.Provider value={shell}>
+        <div className="flex flex-col h-screen">
+          <div className="kh-guest-bar">
+            <img src={emblem} alt="" />
+            <span className="flex flex-col">
+              <b className="font-serif text-[18px] leading-6">Trying the planner</b>
+              <span className="t-caption">Create an account to save the mountain you draft.</span>
+            </span>
+            <Btn kind="ghost" className="ml-auto" onClick={() => setGuest(false)}>
+              Back
+            </Btn>
+            <Btn kind="laurel" onClick={() => void requireAccount('Sign in to Khatwa', undefined, 'sign-in')}>
+              Sign in
+            </Btn>
+          </div>
+          <main className="kh-scroll flex-1">
+            <Expedition />
+          </main>
+        </div>
+        {accountDialog}
+      </ShellContext.Provider>
+    )
+  }
 
   const [crumbA, crumbB] = CRUMBS[route.name]
   const todayLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
@@ -211,6 +312,7 @@ export default function App() {
         ) : null}
 
         {paletteOpen ? <Palette onClose={() => setPaletteOpen(false)} onGo={navigate} /> : null}
+        {accountDialog}
 
         {toasts.length > 0 ? (
           <div className="kh-toasts" aria-live="polite">

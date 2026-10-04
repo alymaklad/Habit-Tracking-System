@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { AppSettings, LevelInfo } from '@shared/types'
+import type { AppSettings, LevelInfo, AccountUser } from '@shared/types'
 
 export type Route =
   | { name: 'today' }
@@ -57,6 +57,16 @@ export interface Shell {
   toast: (kind: 'info' | 'success' | 'warn' | 'error', title: string, body?: string) => void
   /** Opens the distraction-free session view for a running or about-to-run occurrence. */
   openSession: (occurrenceId: number) => void
+  /** Who is signed in; null for a guest, or in a build without accounts. */
+  account: AccountUser | null
+  /** False in a build with no account service. */
+  accountsEnabled: boolean
+  /**
+   * Resolves true once someone is signed in — asking a guest to sign in or create an
+   * account first — and false if they back out. Always true in a build without accounts.
+   */
+  requireAccount: (reason: string, detail?: string, startWith?: 'sign-in' | 'sign-up') => Promise<boolean>
+  signOut: () => Promise<void>
 }
 
 export const ShellContext = createContext<Shell | null>(null)

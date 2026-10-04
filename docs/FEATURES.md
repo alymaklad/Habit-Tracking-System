@@ -1,4 +1,4 @@
-# Adaptive Habit League — what it does
+# Khatwa — what it does
 
 A Windows desktop app that turns daily habits into a measurable progression system.
 A checklist tells you whether you ticked a box; this tells you whether you are getting

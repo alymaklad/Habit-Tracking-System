@@ -11,7 +11,7 @@
 param(
     # Where to put the shortcut. Defaults to the Desktop.
     [string] $Destination = [Environment]::GetFolderPath('Desktop'),
-    [string] $ShortcutName = 'Adaptive Habit League',
+    [string] $ShortcutName = 'Khatwa',
     # Remove the shortcut instead of creating it.
     [switch] $Uninstall
 )
@@ -124,7 +124,7 @@ $link.TargetPath = $electron
 $link.Arguments = "`"$entry`""
 $link.WorkingDirectory = $root
 $link.IconLocation = "$icoPath,0"
-$link.Description = 'Adaptive Habit League - habit tracker with Google Tasks sync'
+$link.Description = 'Khatwa - one step at a time'
 $link.WindowStyle = 1
 $link.Save()
 

@@ -32,6 +32,8 @@ export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.crea
 
 export const SCOPES = [TASKS_SCOPE, CALENDAR_SCOPE] as const
 export const SCOPE = SCOPES.join(' ')
+/** Who the user is, for signing in to their Khatwa account. Grants no access to their data. */
+export const IDENTITY_SCOPE = 'openid email profile'
 
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
@@ -118,7 +120,8 @@ export function authService(deps: {
   function awaitAuthorizationCode(
     clientId: string,
     challenge: string,
-    state: string
+    state: string,
+    request: { scope: string; offline: boolean; prompt: string } = { scope: SCOPE, offline: true, prompt: 'consent' }
   ): Promise<{ code: string; redirectUri: string }> {
     return new Promise((resolve, reject) => {
       let redirectUri = ''
@@ -169,14 +172,14 @@ export function authService(deps: {
         auth.searchParams.set('client_id', clientId)
         auth.searchParams.set('redirect_uri', redirectUri)
         auth.searchParams.set('response_type', 'code')
-        auth.searchParams.set('scope', SCOPE)
+        auth.searchParams.set('scope', request.scope)
         auth.searchParams.set('code_challenge', challenge)
         auth.searchParams.set('code_challenge_method', 'S256')
         auth.searchParams.set('state', state)
-        auth.searchParams.set('access_type', 'offline')
-        // Force consent so a refresh token is issued even on a re-connect, where
-        // Google would otherwise return an access token only.
-        auth.searchParams.set('prompt', 'consent')
+        if (request.offline) auth.searchParams.set('access_type', 'offline')
+        // For the calendar link, consent is forced so a refresh token is issued even on a
+        // re-connect, where Google would otherwise return an access token only.
+        auth.searchParams.set('prompt', request.prompt)
 
         // System browser, never an embedded window: an Electron webview breaks Google's
         // policy and hides the address bar the user needs in order to trust the page.
@@ -207,6 +210,39 @@ export function authService(deps: {
         inFlight.close()
         inFlight = null
       }
+    },
+
+    /**
+     * Signs the user in with Google for their Khatwa account: identity scopes only, and
+     * nothing is stored — the ID token goes straight to the account service, which checks
+     * it with Google. Linking the calendar is a separate, explicit step.
+     */
+    async identityToken(): Promise<string> {
+      const { clientId, clientSecret } = creds()
+      this.cancel()
+
+      const { verifier, challenge } = pkce()
+      const state = base64url(randomBytes(16))
+      const { code, redirectUri } = await awaitAuthorizationCode(clientId, challenge, state, {
+        scope: IDENTITY_SCOPE,
+        offline: false,
+        prompt: 'select_account'
+      })
+
+      const body: Record<string, string> = {
+        client_id: clientId,
+        code,
+        code_verifier: verifier,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri
+      }
+      if (clientSecret) body.client_secret = clientSecret
+
+      const res = await postForm(TOKEN_ENDPOINT, body)
+      if (!res.ok) throw new Error(`Google sign-in failed: ${res.status} ${await res.text()}`)
+      const json = (await res.json()) as { id_token?: string }
+      if (!json.id_token) throw new Error('Google did not return an identity token.')
+      return json.id_token
     },
 
     /** Opens the system browser, waits for the loopback redirect, stores the tokens. */

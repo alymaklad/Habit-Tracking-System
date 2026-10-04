@@ -5,6 +5,7 @@ import Icon from '../components/Icon'
 import { Button, Card, CardTitle, ErrorState, Field, Label, Loading, Toggle } from '../components/ui'
 import { useData } from '../hooks/useData'
 import { SYNC_COLOR, SYNC_LABEL } from '../lib/format'
+import { useShell } from '../khatwa/nav'
 
 const SCORING_ROWS: [keyof AppSettings['scoring'], string, boolean][] = [
   ['fullCompletion', 'Full completion', true],
@@ -225,9 +226,8 @@ export default function Settings({
 }) {
   const { data, error, refetch } = useData(() => window.api.settings.get(), [])
   const [local, setLocal] = useState<AppSettings | null>(null)
-  const [clientId, setClientId] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
   const [hasCreds, setHasCreds] = useState(true)
+  const { account, signOut } = useShell()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -284,6 +284,22 @@ export default function Settings({
           </Field>
         </Card>
 
+        {/* ------------------------------------------------ account */}
+        {account ? (
+          <Card style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+            <CardTitle>Your account</CardTitle>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                <span style={{ fontSize: 13 }}>{account.name ?? account.email}</span>
+                {account.name ? <span style={{ fontSize: 11.5, color: 'var(--faint)' }}>{account.email}</span> : null}
+              </div>
+              <Button kind="danger" onClick={() => void signOut()}>
+                SIGN OUT
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
         {/* ------------------------------------------------ Google */}
         <Card
           accent={
@@ -296,7 +312,7 @@ export default function Settings({
           style={{ display: 'flex', flexDirection: 'column', gap: 13 }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <CardTitle>Google account</CardTitle>
+            <CardTitle>Google Calendar</CardTitle>
             {status ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span
@@ -318,37 +334,10 @@ export default function Settings({
           </div>
 
           {!hasCreds ? (
-            <>
-              <span style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--dim)', textWrap: 'pretty' }}>
-                Before connecting, create a <strong>Desktop app</strong> OAuth client in Google
-                Cloud Console and enable the Tasks and Calendar APIs. See{' '}
-                <button
-                  onClick={() =>
-                    void window.api.app.openExternal('https://console.cloud.google.com/apis/credentials')
-                  }
-                  style={{ color: 'var(--accent)', textDecoration: 'underline' }}
-                >
-                  Cloud Console
-                </button>
-                , then paste the client ID here.
-              </span>
-              <Field label="Client ID">
-                <input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="…apps.googleusercontent.com" />
-              </Field>
-              <Field label="Client secret" hint="Optional — installed apps cannot keep secrets, PKCE protects the exchange">
-                <input value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} />
-              </Field>
-              <Button
-                kind="solid"
-                disabled={!clientId.trim()}
-                onClick={async () => {
-                  await window.api.google.setCredentials(clientId, clientSecret || null)
-                  setHasCreds(await window.api.google.hasCredentials())
-                }}
-              >
-                SAVE CREDENTIALS
-              </Button>
-            </>
+            <span style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--dim)', textWrap: 'pretty' }}>
+              Google linking is not set up in this build. Add the app’s Google client to <code>.env</code> and
+              rebuild — see docs/GOOGLE_SETUP.md.
+            </span>
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -370,7 +359,7 @@ export default function Settings({
                       setBusy(false)
                     }}
                   >
-                    DISCONNECT
+                    UNLINK
                   </Button>
                 ) : (
                   <Button
@@ -384,7 +373,7 @@ export default function Settings({
                       setBusy(false)
                     }}
                   >
-                    CONNECT GOOGLE
+                    LINK GOOGLE CALENDAR
                   </Button>
                 )}
               </div>

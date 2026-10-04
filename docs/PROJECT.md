@@ -1,4 +1,4 @@
-# Adaptive Habit League — the whole idea, and how it's built
+# Khatwa — the whole idea, and how it's built
 
 This document is the deep version. [README.md](../README.md) is the quick tour and
 [FEATURES.md](FEATURES.md) is the user-facing feature list; this is the thing to read to
@@ -19,7 +19,7 @@ hard: it requires owning duration, difficulty, and a scoring model that survives
 revised after the fact (you untick something three days later — what happens to the
 points you already earned?).
 
-Adaptive Habit League is built around answering that second question. Every screen is
+Khatwa is built around answering that second question. Every screen is
 in service of one idea: **turn what you did into a number you can compare against what
 you did before**, honestly, including when you make mistakes and correct them.
 

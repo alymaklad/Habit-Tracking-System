@@ -42,14 +42,26 @@ You need your own Google Cloud project. It takes about ten minutes, once.
 *APIs & Services → Credentials → Create credentials → OAuth client ID*
 
 - Application type: **Desktop app**
-- Copy the **Client ID**. The client secret is optional; installed apps cannot keep
-  secrets, and this app uses PKCE to protect the exchange.
+- Copy the **Client ID** and **Client secret**.
 
-## 4. Connect
+## 4. Build them into the app
 
-Open **Settings → Google account**, paste the client ID, save, then click **Connect
-Google**. Your browser opens Google's consent screen; approve, and the tab tells you to
-come back.
+These are the app's own credentials, set once by whoever builds Khatwa — users never see
+them. Copy `.env.example` to `.env` (git-ignored) and fill in:
+
+```
+MAIN_VITE_GOOGLE_CLIENT_ID=…apps.googleusercontent.com
+MAIN_VITE_GOOGLE_CLIENT_SECRET=…
+```
+
+then rebuild. Google does not treat a Desktop client's secret as confidential — it ships
+inside every installed copy, and PKCE protects the sign-in — so this is the intended way
+to distribute it. (Never do the same with an AI provider key: that one *is* a secret.)
+
+## 5. Link
+
+Users open **Settings → Google Calendar** and click **Link Google Calendar**. Their
+browser opens Google's consent screen; they approve, and the tab tells them to come back.
 
 The app never sees your Google password. Tokens are encrypted with Windows DPAPI and
 stored locally; they never cross into the app's UI process.
@@ -68,7 +80,7 @@ Google Tasks notifications are Google Calendar notifications underneath, and a t
 date but no time becomes an all-day entry that fires **no timed push**. The Tasks API
 cannot write a time. So to make "German starts in 30 minutes" reach your phone, the app
 mirrors each occurrence as a timed event — with a popup reminder — onto a secondary
-calendar **it creates itself**, named *Adaptive Habit League*.
+calendar **it creates itself**, named *Khatwa*.
 
 That scope cannot see or touch your existing calendars. Nothing on that calendar is ever
 read back to decide whether a habit was done.
@@ -130,5 +142,5 @@ Once connected:
 
 ## Disconnecting
 
-**Settings → Google account → Disconnect** revokes the token with Google and deletes the
+**Settings → Google Calendar → Unlink** revokes the token with Google and deletes the
 local copy. Your habit history is kept — erasing it is a separate, explicit action.

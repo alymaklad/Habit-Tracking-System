@@ -1,5 +1,6 @@
 {
-  "name": "adaptive-habit-league",
+  "name": "khatwa",
+  "productName": "Khatwa",
   "version": "0.1.0",
   "description": "Windows habit tracker with Google Tasks sync, streaks, XP and adaptive difficulty",
   "main": "./out/main/index.js",

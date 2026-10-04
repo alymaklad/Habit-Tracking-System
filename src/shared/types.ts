@@ -604,6 +604,22 @@ export interface AiProviderStatus {
   note: string
 }
 
+/** The person signed in to their Khatwa account. */
+export interface AccountUser {
+  id: string
+  email: string
+  name: string | null
+  image: string | null
+}
+
+export interface AccountStatus {
+  /** False when this build has no account service set up (a development build). */
+  configured: boolean
+  user: AccountUser | null
+  /** The service could not be reached; `user` is the last one known. */
+  offline: boolean
+}
+
 export interface AiStatus {
   /** Which provider the planner will use. */
   provider: AiProvider

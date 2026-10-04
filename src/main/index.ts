@@ -18,8 +18,8 @@ import { registerIpc } from './ipc'
 import iconPath from '../../resources/icon.png?asset'
 import { pathToFileURL } from 'node:url'
 import { ATTACHMENT_SCHEME } from './persistence/journalRepo'
+import { adoptLegacyData, LEGACY_APP_NAME } from './platform/legacyData'
 
-/** Shown to the user. The internal app name stays put — it decides where the database lives. */
 const BRAND = 'Khatwa'
 
 let win: BrowserWindow | null = null
@@ -32,7 +32,7 @@ const isDev = !app.isPackaged
 // Pin the name BEFORE anything reads `userData`. Launched unpackaged, Electron would
 // otherwise fall back to "Electron" and put the database somewhere different from the
 // packaged build — silently splitting a user's history across two files.
-app.setName('Adaptive Habit League')
+app.setName(BRAND)
 
 /**
  * A single instance only — a second launch focuses the window already running.
@@ -44,6 +44,18 @@ app.setName('Adaptive Habit League')
  */
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
 if (!gotSingleInstanceLock) app.quit()
+
+// The data folder follows the app name; bring a user's data over from the old name once.
+// Only into the normal folder: a run given its own --user-data-dir (tests, the UI check)
+// must never pick up a real user's database and Google tokens.
+if (gotSingleInstanceLock && app.getPath('userData') === join(app.getPath('appData'), BRAND)) {
+  try {
+    const result = adoptLegacyData(join(app.getPath('appData'), LEGACY_APP_NAME), app.getPath('userData'))
+    if (result === 'copied') console.info(`[startup] copied data from "${LEGACY_APP_NAME}"`)
+  } catch (err) {
+    console.error('[startup] could not copy data from the old app folder', err)
+  }
+}
 
 // ------------------------------------------------------------------ tray
 
@@ -275,7 +287,7 @@ if (gotSingleInstanceLock) void start()
 
 async function start(): Promise<void> {
   await app.whenReady()
-  app.setAppUserModelId('com.adaptivehabitleague.app')
+  app.setAppUserModelId('com.khatwa.app')
 
   protocol.handle(ATTACHMENT_SCHEME, (req) => {
     const url = new URL(req.url)
@@ -397,6 +409,14 @@ async function start(): Promise<void> {
 function buildContext(): AppContext {
   return createContext({
     dbPath: join(app.getPath('userData'), 'habits.db'),
+    googleClient: {
+      clientId: import.meta.env.MAIN_VITE_GOOGLE_CLIENT_ID,
+      clientSecret: import.meta.env.MAIN_VITE_GOOGLE_CLIENT_SECRET
+    },
+    account: {
+      authUrl: import.meta.env.MAIN_VITE_NEON_AUTH_URL,
+      origin: import.meta.env.MAIN_VITE_NEON_AUTH_ORIGIN
+    },
     toast: nativeToast,
     onSyncStatus: (status: SyncStatus) => {
       send(PUSH_CHANNELS.syncStatus, status)

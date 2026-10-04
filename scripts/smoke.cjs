@@ -26,10 +26,10 @@ const eq = (actual, expected, label) => {
   return `${label} = ${actual}`
 }
 
-app.setName('Adaptive Habit League Smoke')
+app.setName('Khatwa Smoke')
 
 app.whenReady().then(async () => {
-  const dbPath = join(tmpdir(), `ahl-smoke-${Date.now()}.db`)
+  const dbPath = join(tmpdir(), `khatwa-smoke-${Date.now()}.db`)
   const toasts = []
 
   // The context is built as its own entry so it can be required without triggering the

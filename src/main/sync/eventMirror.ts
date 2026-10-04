@@ -6,7 +6,9 @@ import type { OccurrenceRepo } from '../persistence/occurrenceRepo'
 import type { SettingsRepo } from '../persistence/settingsRepo'
 import type { SyncRepo } from '../persistence/syncRepo'
 
-export const MIRROR_CALENDAR_TITLE = 'Adaptive Habit League'
+export const MIRROR_CALENDAR_TITLE = 'Khatwa'
+/** The calendar's name before the app was renamed; such a calendar is renamed, not replaced. */
+const LEGACY_CALENDAR_TITLE = 'Adaptive Habit League'
 const CALENDAR_FLAG = 'mirrorCalendarId'
 
 /**
@@ -36,7 +38,16 @@ export function eventMirror(deps: {
     if (stored) {
       // Confirm it still exists — the user may have deleted it from the Calendar UI.
       const found = await calendar.getCalendar(stored)
-      if (found) return stored
+      if (found) {
+        if (found.summary === LEGACY_CALENDAR_TITLE) {
+          // Best effort: a failed rename leaves a working calendar with the old name.
+          await calendar
+            .renameCalendar(stored, MIRROR_CALENDAR_TITLE)
+            .then(() => sync.log('info', `Renamed reminder calendar to "${MIRROR_CALENDAR_TITLE}"`))
+            .catch((err: unknown) => sync.log('warn', `Could not rename the reminder calendar: ${err instanceof Error ? err.message : String(err)}`))
+        }
+        return stored
+      }
       settings.setFlag(CALENDAR_FLAG, null)
     }
 

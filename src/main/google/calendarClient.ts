@@ -121,6 +121,13 @@ export function calendarClient(deps: { auth: AuthService; maxRetries?: number })
       )
     },
 
+    /** Rename the app's own calendar (used once, when the app itself was renamed). */
+    async renameCalendar(calendarId: string, summary: string): Promise<GoogleCalendar> {
+      return CalendarSchema.parse(
+        await request(`/calendars/${encodeURIComponent(calendarId)}`, { method: 'PATCH', body: { summary } })
+      )
+    },
+
     async getCalendar(calendarId: string): Promise<GoogleCalendar | null> {
       try {
         return CalendarSchema.parse(

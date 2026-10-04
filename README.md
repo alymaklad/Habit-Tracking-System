@@ -1,4 +1,4 @@
-# Adaptive Habit League
+# Khatwa
 
 A Windows desktop habit tracker that measures improvement rather than counting ticks —
 streaks, XP, adaptive difficulty and weekly deltas — synchronised with Google Tasks so a

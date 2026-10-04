@@ -18,7 +18,7 @@ import { formatDuration } from '../domain/time'
 export const MARKER_PREFIX = 'ahl'
 const MARKER_RE = /\[ahl:(\d+)\]/i
 
-export const APP_SIGNATURE = 'Adaptive Habit League'
+export const APP_SIGNATURE = 'Khatwa'
 
 /** The notes body written onto a provisioned task. */
 export function buildNotes(habit: Pick<Habit, 'id' | 'targetMinutes'>, time: LocalTime): string {

@@ -240,6 +240,14 @@ export function registerIpc(
 
   // ----------------------------------------------------------------- ai
 
+  // ----------------------------------------------------------------- account
+
+  handle('account:status', () => ctx.account.status())
+  handle('account:signUp', (name: string, email: string, password: string) => ctx.account.signUp(name, email, password))
+  handle('account:signIn', (email: string, password: string) => ctx.account.signIn(email, password))
+  handle('account:signInWithGoogle', () => ctx.account.signInWithGoogle())
+  handle('account:signOut', () => ctx.account.signOut())
+
   handle('ai:status', () => ctx.aiStatus())
   mutate('ai:setProvider', (provider: AiProvider) => ctx.setAiProvider(provider))
   mutate('ai:setCredentials', (provider: AiProvider, apiKey: string | null, model: string | null) =>
@@ -250,9 +258,6 @@ export function registerIpc(
 
   handle('google:status', () => ctx.orchestrator.status())
   handle('google:hasCredentials', () => ctx.hasCredentials())
-  mutate('google:setCredentials', (clientId: string, clientSecret: string | null) =>
-    ctx.setCredentials(clientId, clientSecret)
-  )
 
   handle('google:connect', async () => {
     try {

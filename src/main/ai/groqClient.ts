@@ -379,7 +379,7 @@ export function groqClient(opts: {
         const res = await doFetch(url, {
           method: 'GET',
           redirect: 'follow',
-          headers: { 'user-agent': 'AdaptiveHabitLeague/1.0 (link check)', accept: 'text/html,*/*;q=0.5' },
+          headers: { 'user-agent': 'Khatwa/1.0 (link check)', accept: 'text/html,*/*;q=0.5' },
           signal: AbortSignal.timeout(10_000)
         })
         if (!res.ok) return { ok: false, title: null, excerpt: '', error: `http_${res.status}` }

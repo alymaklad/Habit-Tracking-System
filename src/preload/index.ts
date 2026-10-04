@@ -126,6 +126,14 @@ const api: HabitApi = {
     remove: (id) => invoke('goals:remove', id)
   },
 
+  account: {
+    status: () => invoke('account:status'),
+    signUp: (name, email, password) => invoke('account:signUp', name, email, password),
+    signIn: (email, password) => invoke('account:signIn', email, password),
+    signInWithGoogle: () => invoke('account:signInWithGoogle'),
+    signOut: () => invoke('account:signOut')
+  },
+
   ai: {
     status: () => invoke('ai:status'),
     setProvider: (provider) => invoke('ai:setProvider', provider),
@@ -141,8 +149,6 @@ const api: HabitApi = {
   google: {
     status: () => invoke('google:status'),
     hasCredentials: () => invoke('google:hasCredentials'),
-    setCredentials: (clientId, clientSecret) =>
-      invoke('google:setCredentials', clientId, clientSecret),
     connect: () => invoke('google:connect'),
     disconnect: () => invoke('google:disconnect'),
     syncNow: () => invoke('google:syncNow')
