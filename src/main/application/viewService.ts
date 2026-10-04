@@ -5,6 +5,9 @@ import type {
   DashboardCard,
   DashboardView,
   DifficultyProposal,
+  HabitDetailView,
+  HabitHistoryDay,
+  HabitWeek,
   LocalDate,
   PerformanceDay,
   PerformanceHabit,
@@ -19,7 +22,7 @@ import type {
   WeeklyReview
 } from '@shared/types'
 import { ACHIEVEMENTS, PERSONAL_RECORD_LABELS } from '../domain/achievements'
-import { levelInfo } from '../domain/levels'
+import { levelInfo } from '@shared/levels'
 import { fullXp, improvement } from '../domain/scoring'
 import {
   addDays,
@@ -658,7 +661,42 @@ export function viewService(deps: {
     return records.pendingProposals()
   }
 
+  /** One habit's recent record: what happened each day, and how the weeks add up. */
+  function habitDetail(habitId: number, weeks = 12, now: Date = new Date()): HabitDetailView | null {
+    const habit = habits.get(habitId)
+    if (!habit) return null
+    const t = today(now)
+    const firstWeek = addDays(weekStart(t), -(weeks - 1) * 7)
+    const blocks = calendarRange(firstWeek, t, now).filter((b) => b.habitId === habitId)
+    const dailyByDate = new Map(records.dailyForHabit(habitId, firstWeek, t).map((r) => [r.date, r]))
+    const history: HabitHistoryDay[] = blocks
+      .map((b) => {
+        const r = dailyByDate.get(b.date)
+        return { date: b.date, status: b.status, minutes: r?.durationMinutes ?? 0, origin: r?.origin ?? null, points: r?.points ?? 0 }
+      })
+      .sort((a, b) => b.date.localeCompare(a.date))
+    const byWeek: HabitWeek[] = Array.from({ length: weeks }, (_, i) => ({ weekStart: addDays(firstWeek, i * 7), scheduled: 0, completed: 0, minutes: 0 }))
+    for (const d of history) {
+      const w = byWeek.find((x) => d.date >= x.weekStart && d.date <= addDays(x.weekStart, 6))
+      if (!w) continue
+      w.scheduled++
+      if (d.status === 'complete') w.completed++
+      w.minutes += d.minutes
+    }
+    return {
+      habit,
+      streak: engine.streakFor(habitId),
+      history,
+      weeks: byWeek,
+      totalMinutes: history.reduce((s, d) => s + d.minutes, 0),
+      totalCompleted: history.filter((d) => d.status === 'complete').length,
+      assumedMinutes: history.filter((d) => d.origin === 'assumed').reduce((s, d) => s + d.minutes, 0),
+      proposal: records.pendingProposals().find((p) => p.habitId === habitId) ?? null
+    }
+  }
+
   return {
+    habitDetail,
     dashboard,
     todoView,
     performance,

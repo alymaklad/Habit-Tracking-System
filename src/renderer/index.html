@@ -1,17 +1,17 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
       Locked-down CSP. The renderer never needs to reach the network: all data comes
-      over IPC, and every font is a system face, so the app works fully offline.
+      over IPC, and both typefaces are bundled with the app, so it works fully offline.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: khatwa-file:; font-src 'self' data:; connect-src 'self'"
     />
-    <title>Adaptive Habit League</title>
+    <title>Khatwa</title>
   </head>
   <body>
     <div id="root"></div>

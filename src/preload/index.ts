@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import {
   PUSH_CHANNELS,
   type GoalPlanProgress,
@@ -54,11 +54,12 @@ const api: HabitApi = {
     weeklyReview: (anchor) => invoke('view:weeklyReview', anchor),
     achievements: () => invoke('view:achievements'),
     personalRecords: () => invoke('view:personalRecords'),
-    proposals: () => invoke('view:proposals')
+    proposals: () => invoke('view:proposals'),
+    habitDetail: (habitId) => invoke('view:habitDetail', habitId)
   },
 
   todo: {
-    addManual: (title, date) => invoke('todo:addManual', title, date),
+    addManual: (title, date, goalId) => invoke('todo:addManual', title, date, goalId),
     addSubtask: (occurrenceId, title) => invoke('todo:addSubtask', occurrenceId, title),
     setDone: (id, done) => invoke('todo:setDone', id, done),
     rename: (id, title) => invoke('todo:rename', id, title),
@@ -74,7 +75,47 @@ const api: HabitApi = {
     reject: (id) => invoke('proposal:reject', id)
   },
 
+  letGo: {
+    list: () => invoke('letGo:list'),
+    get: (id) => invoke('letGo:get', id),
+    create: (draft) => invoke('letGo:create', draft),
+    update: (id, draft) => invoke('letGo:update', id, draft),
+    checkIn: (id, date, input) => invoke('letGo:checkIn', id, date, input),
+    clearCheckIn: (id, date) => invoke('letGo:clearCheckIn', id, date),
+    leaveBehind: (id, vow) => invoke('letGo:leaveBehind', id, vow),
+    pickUpAgain: (id) => invoke('letGo:pickUpAgain', id),
+    remove: (id) => invoke('letGo:remove', id)
+  },
+
+  journal: {
+    list: () => invoke('journal:list'),
+    save: (id, draft) => invoke('journal:save', id, draft),
+    remove: (id) => invoke('journal:remove', id)
+  },
+
+  attachments: {
+    import: (paths) => invoke('attachments:import', paths),
+    discard: (id) => invoke('attachments:discard', id),
+    setCaption: (id, caption) => invoke('attachments:setCaption', id, caption),
+    open: (id) => invoke('attachments:open', id),
+    // A dropped File only carries its path on this side of the bridge.
+    pathForFile: (file) => webUtils.getPathForFile(file)
+  },
+
+  tools: {
+    list: () => invoke('tools:list'),
+    save: (id, draft) => invoke('tools:save', id, draft),
+    remove: (id) => invoke('tools:remove', id)
+  },
+
+  guide: {
+    list: () => invoke('guide:list'),
+    dismiss: (key) => invoke('guide:dismiss', key)
+  },
+
   goals: {
+    draft: () => invoke('goals:draft'),
+    saveDraft: (draft) => invoke('goals:saveDraft', draft),
     list: () => invoke('goals:list'),
     get: (id) => invoke('goals:get', id),
     draftPlan: (input) => invoke('goals:draftPlan', input),

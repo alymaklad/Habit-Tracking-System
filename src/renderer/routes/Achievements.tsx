@@ -1,136 +1,108 @@
-import Screen from '../components/Screen'
-import Icon from '../components/Icon'
-import { Bar, Card, CardTitle, Label } from '../components/ui'
+import { useState } from 'react'
+import type { AchievementView, PersonalRecordView } from '@shared/types'
 import { useData } from '../hooks/useData'
+import { dayMonth } from '../lib/khatwa'
+import { Page, PageHead } from '../khatwa/Page'
+import { Bar, Dot, LoadError, Loading, Stamp } from '../khatwa/ui'
+import { SealGlyph } from './Me'
+
+type Filter = 'all' | 'pressed' | 'pending'
 
 export default function Achievements() {
-  const { data: achievements } = useData(() => window.api.view.achievements(), [])
-  const { data: records } = useData(() => window.api.view.personalRecords(), [])
+  const [filter, setFilter] = useState<Filter>('all')
+  const { data, error, refetch } = useData<{ achievements: AchievementView[]; records: PersonalRecordView[] }>(async () => {
+    const [achievements, records] = await Promise.all([window.api.view.achievements(), window.api.view.personalRecords()])
+    return { achievements, records }
+  }, [])
 
-  const list = achievements ?? []
-  const unlocked = list.filter((a) => a.unlockedAt).length
-  const pct = list.length ? Math.round((unlocked / list.length) * 100) : 0
+  if (error) return <Page><LoadError message={error} onRetry={refetch} /></Page>
+  if (!data) return <Page><Loading label="Opening the seal cabinet…" /></Page>
+
+  const pressed = data.achievements.filter((a) => a.unlockedAt)
+  const shown = data.achievements
+    .filter((a) => (filter === 'pressed' ? a.unlockedAt : filter === 'pending' ? !a.unlockedAt : true))
+    .sort((a, b) => Number(!!b.unlockedAt) - Number(!!a.unlockedAt) || b.progress - a.progress)
 
   return (
-    <Screen
-      title="Achievements"
-      subtitle={`${unlocked} of ${list.length} unlocked`}
-      scroll={false}
-    >
-      <div style={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
-        <div style={{ flexGrow: 1, padding: '18px 24px', overflowY: 'auto', minWidth: 0 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 14,
-              gap: 20
-            }}
-          >
-            <Label>{unlocked} of {list.length} unlocked</Label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: 240 }}>
-              <Bar value={pct} color="var(--gold)" />
-              <span className="num" style={{ fontSize: 12, color: 'var(--gold)' }}>
-                {pct}%
-              </span>
+    <Page>
+      <PageHead
+        eyebrow={
+          <>
+            Tactile markings <Dot /> <span className="is-quiet">Pressed through trial &amp; quiet resolve</span>
+          </>
+        }
+        title="Archival Seals & Wax Stamps"
+        lede="Each seal is pressed by the record itself — never granted, never removed except by an honest correction."
+        aside={
+          <div className="kh-sheet px-6 py-4 flex gap-8">
+            <span className="flex flex-col">
+              <span className="t-stamp !text-[10.5px] text-ink-4">Pressed</span>
+              <span className="font-serif text-[30px] leading-9 text-[var(--ochre-deep)]">{pressed.length}</span>
+            </span>
+            <span className="flex flex-col">
+              <span className="t-stamp !text-[10.5px] text-ink-4">Awaiting</span>
+              <span className="font-serif text-[30px] leading-9">{data.achievements.length - pressed.length}</span>
+            </span>
+          </div>
+        }
+      />
+
+      <div className="kh-segmented mb-6">
+        {(
+          [
+            ['all', 'All seals'],
+            ['pressed', 'Pressed'],
+            ['pending', 'Still ahead']
+          ] as const
+        ).map(([k, label]) => (
+          <button key={k} className={filter === k ? 'is-on' : ''} onClick={() => setFilter(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {shown.length === 0 ? <div className="kh-empty mb-14">Keep taking steps. Your first one is already on its way.</div> : null}
+      <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(230px,1fr))] mb-14">
+        {shown.map((a, i) => (
+          <article key={a.key} className={`kh-card p-6 flex flex-col items-center text-center gap-3 ${a.unlockedAt ? '' : 'opacity-90'}`}>
+            <span className={`kh-seal ${a.unlockedAt ? 'is-earned' : ''}`} style={{ transform: `rotate(${(i % 3) - 1}deg)`, width: 72, height: 72 }}>
+              <SealGlyph a={a} size={24} />
+            </span>
+            <h3 className="font-serif text-[20px] leading-[26px] font-normal m-0 [text-wrap:balance]">{a.name}</h3>
+            <p className="t-caption !text-[12.5px] m-0 [text-wrap:pretty]">{a.description}</p>
+            <div className="mt-auto w-full pt-2">
+              {a.unlockedAt ? (
+                <Stamp tone="ochre">Pressed · {dayMonth(a.unlockedAt.slice(0, 10))}</Stamp>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <Bar value={a.progress} thin />
+                  <span className="t-caption">{a.progressLabel}</span>
+                </div>
+              )}
             </div>
-          </div>
+          </article>
+        ))}
+      </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-              gap: 12
-            }}
-          >
-            {list.map((a) => {
-              const on = a.unlockedAt !== null
-              const color = on ? 'var(--gold)' : 'var(--faint)'
-              return (
-                <div
-                  key={a.key}
-                  title={a.description}
-                  style={{
-                    background: on ? 'var(--panel)' : 'var(--panel2)',
-                    border: `1px solid ${on ? 'var(--gold)' : 'var(--line)'}`,
-                    padding: '16px 14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 9,
-                    textAlign: 'center',
-                    opacity: on ? 1 : 0.62
-                  }}
-                >
-                  <div style={{ position: 'relative', width: 46, height: 50 }}>
-                    <svg width="46" height="50" viewBox="0 0 42 46" fill="none">
-                      <path
-                        d="M21 1.5 39.5 12v22L21 44.5 2.5 34V12Z"
-                        fill={on ? 'color-mix(in oklab, var(--gold) 16%, transparent)' : 'transparent'}
-                        stroke={on ? 'var(--gold)' : 'var(--line)'}
-                        strokeWidth="1.5"
-                      />
-                    </svg>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Icon name={on ? 'achievements' : 'lock'} size={19} color={color} />
-                    </div>
-                  </div>
-
-                  <span className="display" style={{ fontSize: 13, lineHeight: 1.15 }}>
-                    {a.name}
-                  </span>
-                  <span style={{ fontSize: 10, color: 'var(--faint)' }}>{a.progressLabel}</span>
-
-                  {!on && a.progress > 0 ? (
-                    <div style={{ width: '100%' }}>
-                      <Bar value={a.progress * 100} color="var(--gold)" height={3} />
-                    </div>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
+      <section>
+        <div className="flex flex-col gap-1 mb-4">
+          <span className="t-stamp text-[var(--ochre-deep)]">Permanent inscriptions</span>
+          <h2 className="t-h1 !text-[30px] m-0">Personal records</h2>
         </div>
-
-        <div
-          style={{
-            width: 314,
-            flexShrink: 0,
-            borderLeft: '1px solid var(--line)',
-            padding: '18px 20px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14
-          }}
-        >
-          <CardTitle>Personal records</CardTitle>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {(records ?? []).map((r) => (
-              <Card key={r.kind} style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <Label>{r.label}</Label>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                  <span className="num" style={{ fontSize: 19 }}>
-                    {r.value}
-                  </span>
-                  {r.achievedOn ? (
-                    <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{r.achievedOn}</span>
-                  ) : null}
-                </div>
-              </Card>
+        {data.records.length === 0 ? (
+          <div className="kh-empty">Records are inscribed as your weeks fill in.</div>
+        ) : (
+          <div className="kh-sheet divide-y divide-[var(--rule)]">
+            {data.records.map((r) => (
+              <div key={r.kind} className="flex items-center gap-4 px-6 py-4">
+                <span className="flex-1 text-[14.5px] text-ink-2">{r.label}</span>
+                <span className="font-serif text-[22px]">{r.value}</span>
+                <span className="t-caption w-24 text-right">{r.achievedOn ? dayMonth(r.achievedOn) : 'All time'}</span>
+              </div>
             ))}
           </div>
-        </div>
-      </div>
-    </Screen>
+        )}
+      </section>
+    </Page>
   )
 }

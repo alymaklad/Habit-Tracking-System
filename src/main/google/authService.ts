@@ -73,7 +73,7 @@ const closePage = (ok: boolean, detail: string): string => `<!doctype html>
   p { font-size:13px; color:#a99fb4; margin:0; }
 </style>
 <div class="card">
-  <h1>${ok ? 'Adaptive Habit League is connected' : 'Connection failed'}</h1>
+  <h1>${ok ? 'Khatwa is connected' : 'Connection failed'}</h1>
   <p>${detail}</p>
 </div>`
 

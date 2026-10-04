@@ -272,5 +272,95 @@ ALTER TABLE todo  ADD COLUMN goal_id INTEGER REFERENCES goal (id) ON DELETE SET 
 CREATE INDEX idx_habit_goal ON habit (goal_id) WHERE goal_id IS NOT NULL;
 CREATE INDEX idx_todo_goal  ON todo  (goal_id) WHERE goal_id IS NOT NULL;
 `
+  },
+  {
+    id: 5,
+    name: 'let go, journal and tools',
+    sql: `
+-- Behaviours the user wants to leave behind. Weight is symbolic (light/medium/heavy),
+-- never a made-up measurement. Leaving one behind is a status, not a deletion: the
+-- history stays and tracking can carry on.
+CREATE TABLE letgo (
+  id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  title                 TEXT    NOT NULL,
+  trigger_contexts_json TEXT    NOT NULL DEFAULT '[]',
+  trigger_notes         TEXT,
+  replacement           TEXT,
+  goal_id               INTEGER REFERENCES goal (id) ON DELETE SET NULL,
+  weight                TEXT    NOT NULL DEFAULT 'medium' CHECK (weight IN ('light', 'medium', 'heavy')),
+  status                TEXT    NOT NULL DEFAULT 'carrying' CHECK (status IN ('carrying', 'left_behind')),
+  started_on            TEXT    NOT NULL,              -- LOCAL YYYY-MM-DD
+  left_behind_at        TEXT,
+  vow                   TEXT,
+  created_at            TEXT    NOT NULL
+);
+
+-- One check-in per behaviour per day; a later answer for the same day replaces it.
+CREATE TABLE letgo_checkin (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  letgo_id      INTEGER NOT NULL REFERENCES letgo (id) ON DELETE CASCADE,
+  date          TEXT    NOT NULL,                      -- LOCAL YYYY-MM-DD
+  resisted      INTEGER NOT NULL CHECK (resisted IN (0, 1)),
+  feelings_json TEXT    NOT NULL DEFAULT '[]',
+  trigger       TEXT,
+  need          TEXT,
+  alternative   TEXT,
+  note          TEXT,
+  created_at    TEXT    NOT NULL,
+  UNIQUE (letgo_id, date)
+);
+CREATE INDEX idx_letgo_checkin_date ON letgo_checkin (date);
+
+CREATE TABLE journal_entry (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  date         TEXT    NOT NULL,                       -- LOCAL YYYY-MM-DD
+  kind         TEXT    NOT NULL DEFAULT 'free' CHECK (kind IN ('free', 'daily', 'deep', 'monthly')),
+  title        TEXT,
+  body         TEXT    NOT NULL DEFAULT '',
+  mood         TEXT    CHECK (mood IS NULL OR mood IN ('good', 'okay', 'low', 'stressed', 'exhausted')),
+  step_toward  TEXT    CHECK (step_toward IS NULL OR step_toward IN ('yes', 'little', 'not_today')),
+  prompts_json TEXT    NOT NULL DEFAULT '{}',
+  tags_json    TEXT    NOT NULL DEFAULT '[]',
+  goal_id      INTEGER REFERENCES goal (id) ON DELETE SET NULL,
+  letgo_id     INTEGER REFERENCES letgo (id) ON DELETE SET NULL,
+  created_at   TEXT    NOT NULL,
+  updated_at   TEXT    NOT NULL
+);
+CREATE INDEX idx_journal_date ON journal_entry (date);
+-- A month has at most one monthly reflection page.
+CREATE UNIQUE INDEX idx_journal_monthly ON journal_entry (date) WHERE kind = 'monthly';
+
+-- What helps the climb: the positive complement to the backpack.
+CREATE TABLE tool (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT    NOT NULL,
+  description TEXT,
+  goal_id     INTEGER REFERENCES goal (id) ON DELETE SET NULL,
+  habit_id    INTEGER REFERENCES habit (id) ON DELETE SET NULL,
+  created_at  TEXT    NOT NULL
+);
+`
+  },
+  {
+    id: 6,
+    name: 'attachments and mountain obstacles',
+    sql: `
+-- Files the user adds to the journal are copied into the app's own folder; this row is
+-- the only link to them. journal_id is NULL while a file is attached to an entry that
+-- has not been saved yet — such rows are swept away on the next start.
+CREATE TABLE attachment (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  journal_id    INTEGER REFERENCES journal_entry (id) ON DELETE CASCADE,
+  stored_name   TEXT    NOT NULL UNIQUE,
+  original_name TEXT    NOT NULL,
+  mime          TEXT    NOT NULL,
+  size          INTEGER NOT NULL,
+  caption       TEXT,
+  created_at    TEXT    NOT NULL
+);
+CREATE INDEX idx_attachment_journal ON attachment (journal_id);
+
+ALTER TABLE goal ADD COLUMN obstacles_json TEXT NOT NULL DEFAULT '[]';
+`
   }
 ]

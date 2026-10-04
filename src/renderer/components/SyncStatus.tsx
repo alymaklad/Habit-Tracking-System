@@ -162,13 +162,15 @@ export function SyncDetailsPanel({
       className="rise"
       style={{
         position: 'absolute',
-        left: 210,
+        left: 'calc(var(--rail-width) + 12px)',
         bottom: 16,
         width: 320,
         zIndex: 50,
         background: 'var(--panel)',
         border: `1px solid ${expired ? 'var(--bad)' : 'var(--line)'}`,
-        boxShadow: '0 18px 50px -14px rgba(0,0,0,.65)',
+        boxShadow: 'var(--shadow-float)',
+        borderRadius: 12,
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column'
       }}

@@ -51,6 +51,8 @@ export interface AiClient {
   critique(prompt: Prompt): Promise<Critique>
   fetchPage(url: string): Promise<FetchedPage>
   judgeRelevance(pages: PageToJudge[], topic: string): Promise<boolean[]>
+  /** Told how long the client is about to wait out a rate limit, so the wizard can count down. */
+  setWaitListener?(listener: ((ms: number) => void) | null): void
 }
 
 export function relevancePrompt(pages: PageToJudge[], topic: string): Prompt {

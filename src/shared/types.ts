@@ -257,6 +257,8 @@ export interface PushRelayConfig {
 }
 
 export interface AppSettings {
+  /** What the app calls the user. Empty means no name is used. */
+  displayName: string
   timezone: string
   theme: ThemeMode
   syncIntervalMinutes: number
@@ -554,6 +556,21 @@ export interface GoalPlan {
   resources: GoalResource[]
 }
 
+/** The goal wizard put aside mid-way, to be picked up again from the Mountains page. */
+export interface SavedGoalDraft {
+  title: string
+  story: string
+  targetDate: LocalDate | null
+  weeklyMinutes: number
+  anchors: string[]
+  plan: GoalPlan | null
+  warnings: string[]
+  /** What the planner adjusted on its own; absent on drafts saved before it existed. */
+  notes?: string[]
+  iterations: number
+  savedAt: Iso
+}
+
 /** Which phase of the planning loop is running — shown in the wizard. */
 export type GoalPlanPhase = 'researching' | 'drafting' | 'reviewing' | 'revising'
 
@@ -561,14 +578,18 @@ export interface GoalPlanProgress {
   phase: GoalPlanPhase
   iteration: number
   maxIterations: number
+  /** Set while the provider is rate-limiting: when the next try goes out (epoch ms). */
+  waitingUntil?: number | null
 }
 
 export interface GoalDraftResult {
   plan: GoalPlan
   /** How many drafting passes it took. */
   iterations: number
-  /** Anything the Intervenor could not resolve within the cap — shown to the user. */
+  /** What is still wrong and the user should check — worded for the user. */
   warnings: string[]
+  /** What the planner already fixed on its own (shortened sessions, dropped links). */
+  notes: string[]
 }
 
 export type AiProvider = 'anthropic' | 'groq'
@@ -591,6 +612,20 @@ export interface AiStatus {
   providers: AiProviderStatus[]
 }
 
+/**
+ * Something standing in the way of a mountain — fear of starting, uncertainty about what
+ * to learn. Drawn on the trail near the waypoint it guards; never an enemy, only terrain.
+ */
+export interface GoalObstacle {
+  id: string
+  title: string
+  /** How the user means to pass it, if they know. */
+  note: string | null
+  /** The waypoint (milestone to-do id) it guards, sitting on the stretch just before it; null for the final climb to the summit. */
+  nearMilestoneId: number | null
+  passed: boolean
+}
+
 export interface Goal {
   id: number
   title: string
@@ -600,6 +635,7 @@ export interface Goal {
   status: GoalStatus
   mindMap: MindMapNode[]
   resources: GoalResource[]
+  obstacles: GoalObstacle[]
   createdAt: Iso
   closedAt: Iso | null
 }
@@ -611,6 +647,188 @@ export interface GoalView extends Goal {
   milestonesDone: number
   milestonesTotal: number
   daysToTarget: number | null
+}
+
+// ------------------------------------------------------------- habit detail
+
+export interface HabitHistoryDay {
+  date: LocalDate
+  status: OccurrenceStatus
+  minutes: number
+  origin: TimeLogOrigin | null
+  points: number
+}
+
+export interface HabitWeek {
+  weekStart: LocalDate
+  scheduled: number
+  completed: number
+  minutes: number
+}
+
+export interface HabitDetailView {
+  habit: Habit
+  streak: StreakInfo
+  /** Most recent first, up to twelve weeks back. */
+  history: HabitHistoryDay[]
+  /** Oldest first, Saturday-to-Friday weeks. */
+  weeks: HabitWeek[]
+  totalMinutes: number
+  totalCompleted: number
+  /** Minutes credited without a timer or typed entry — shown separately so figures stay honest. */
+  assumedMinutes: number
+  proposal: DifficultyProposal | null
+}
+
+// ------------------------------------------------------------------ let go
+
+/** Symbolic weight — never a fake number of kilograms. */
+export type LetGoWeight = 'light' | 'medium' | 'heavy'
+export type LetGoStatus = 'carrying' | 'left_behind'
+
+export const TRIGGER_CONTEXTS = ['morning', 'work', 'evening', 'before_sleep', 'boredom', 'stress', 'other'] as const
+export type TriggerContext = (typeof TRIGGER_CONTEXTS)[number]
+
+export const LETGO_FEELINGS = ['stressed', 'bored', 'tired', 'lonely', 'overwhelmed', 'frustrated', 'other'] as const
+export type LetGoFeeling = (typeof LETGO_FEELINGS)[number]
+
+export interface LetGoDraft {
+  title: string
+  triggerContexts: TriggerContext[]
+  triggerNotes: string | null
+  /** What the user would like to do instead. */
+  replacement: string | null
+  goalId: number | null
+  weight: LetGoWeight
+  startedOn: LocalDate
+}
+
+export interface LetGoBehavior extends LetGoDraft {
+  id: number
+  status: LetGoStatus
+  leftBehindAt: Iso | null
+  /** The words the user wrote at the leave-behind ceremony, if any. */
+  vow: string | null
+  createdAt: Iso
+}
+
+export interface LetGoCheckinInput {
+  /** true: left behind today. false: the behavior returned. */
+  resisted: boolean
+  feelings: LetGoFeeling[]
+  trigger: string | null
+  need: string | null
+  alternative: string | null
+  note: string | null
+}
+
+export interface LetGoCheckin extends LetGoCheckinInput {
+  id: number
+  letGoId: number
+  date: LocalDate
+  createdAt: Iso
+}
+
+export interface LetGoStats {
+  /** Days since tracking started, today included. */
+  daysCarried: number
+  daysTracked: number
+  daysFree: number
+  /** daysFree / daysTracked, 0–1. A returned day lowers it; it never resets it. */
+  freedomRate: number
+  currentStreak: number
+  bestStreak: number
+}
+
+export interface LetGoView extends LetGoBehavior {
+  goalTitle: string | null
+  stats: LetGoStats
+  /** Every check-in, oldest first. */
+  checkins: LetGoCheckin[]
+  today: LetGoCheckin | null
+  /** Feelings named on days it returned, most frequent first. */
+  feelings: { feeling: LetGoFeeling; count: number; share: number }[]
+  /** Alternatives logged on free days, most frequent first. */
+  alternatives: { text: string; count: number }[]
+  /** Enough tracked days at a steady freedom rate to offer the ceremony. */
+  ceremonyReady: boolean
+}
+
+// ------------------------------------------------------------------ tools
+
+export interface ToolDraft {
+  title: string
+  description: string | null
+  goalId: number | null
+  habitId: number | null
+}
+
+export interface Tool extends ToolDraft {
+  id: number
+  createdAt: Iso
+}
+
+// ---------------------------------------------------------------- journal
+
+export type JournalKind = 'free' | 'daily' | 'deep' | 'monthly'
+export const MOODS = ['good', 'okay', 'low', 'stressed', 'exhausted'] as const
+export type Mood = (typeof MOODS)[number]
+export type StepToward = 'yes' | 'little' | 'not_today'
+
+/** A file the user added to a journal entry, copied into the app's own folder. */
+export interface Attachment {
+  id: number
+  journalId: number | null
+  originalName: string
+  mime: string
+  size: number
+  caption: string | null
+  isImage: boolean
+  /** Served by the app's private protocol; only ever points inside its own attachments folder. */
+  url: string
+  createdAt: Iso
+}
+
+export interface JournalDraft {
+  date: LocalDate
+  kind: JournalKind
+  title: string | null
+  body: string
+  mood: Mood | null
+  stepToward: StepToward | null
+  /** Answers keyed by prompt id, for daily, deep and monthly reflections. */
+  prompts: Record<string, string>
+  tags: string[]
+  goalId: number | null
+  letGoId: number | null
+  /** Attachments to keep on this entry; any previously linked and missing here are deleted. */
+  attachmentIds?: number[]
+}
+
+export interface JournalEntry extends Omit<JournalDraft, 'attachmentIds'> {
+  id: number
+  attachments: Attachment[]
+  createdAt: Iso
+  updatedAt: Iso
+}
+
+// ------------------------------------------------------------------ guide
+
+/**
+ * An observation drawn only from what the user logged. It states counts and leaves
+ * the meaning to them — no diagnosis, no claimed certainty.
+ */
+export interface GuideInsight {
+  key: string
+  observation: string
+  evidence: string
+  action:
+    | { kind: 'add-tool'; label: string; title: string; goalId: number | null }
+    | { kind: 'open-letgo'; label: string; id: number }
+    | { kind: 'open-mountain'; label: string; id: number }
+    | { kind: 'ceremony'; label: string; id: number }
+    | { kind: 'write'; label: string; prompt: string; goalId: number | null }
+    | null
 }
 
 // ---------------------------------------------------------------- IPC

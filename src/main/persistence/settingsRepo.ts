@@ -2,8 +2,9 @@ import { DEFAULT_SCORING, type AppSettings, type ScoringConfig, type ThemeMode }
 import type { Db } from './db'
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  displayName: '',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-  theme: 'dark',
+  theme: 'light',
   syncIntervalMinutes: 5,
   provisionHorizonDays: 7,
   startWithWindows: false,
@@ -73,6 +74,16 @@ export function settingsRepo(db: Db) {
 
     theme(): ThemeMode {
       return this.all().theme
+    },
+
+    /**
+     * `save()` persists the whole blob, so the old dark default is stored for anyone who
+     * ever saved a setting. The Khatwa design is light paper; move them over once.
+     */
+    adoptKhatwaTheme(): void {
+      if (this.getFlag('khatwaThemeAdopted', false)) return
+      if (this.all().theme === 'dark') this.save({ theme: 'light' })
+      this.setFlag('khatwaThemeAdopted', true)
     },
 
     /** Small scratch values that are not user-facing settings. */

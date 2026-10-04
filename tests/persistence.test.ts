@@ -347,6 +347,31 @@ describe('settings', () => {
     expect(s.scoring.unjustifiedSkip).toBe(-1)
     expect(s.provisionHorizonDays).toBe(7)
   })
+
+  it('gives stored settings that predate displayName an empty name', () => {
+    db.prepare("INSERT INTO settings (key, value) VALUES ('app', ?)").run(JSON.stringify({ theme: 'dark', syncIntervalMinutes: 10 }))
+    expect(settingsRepo(db).all().displayName).toBe('')
+  })
+
+  it('moves the old dark default to the light Khatwa theme exactly once', () => {
+    const repo = settingsRepo(db)
+    repo.save({ theme: 'dark', weeklyPointsTarget: 40 })
+    repo.adoptKhatwaTheme()
+    expect(repo.all().theme).toBe('light')
+    expect(repo.all().weeklyPointsTarget).toBe(40)
+
+    // A deliberate choice of dark afterwards is respected on every later start.
+    repo.save({ theme: 'dark' })
+    repo.adoptKhatwaTheme()
+    expect(repo.all().theme).toBe('dark')
+  })
+
+  it('leaves a system theme alone', () => {
+    const repo = settingsRepo(db)
+    repo.save({ theme: 'system' })
+    repo.adoptKhatwaTheme()
+    expect(repo.all().theme).toBe('system')
+  })
 })
 
 describe('sync state', () => {

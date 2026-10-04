@@ -1,4 +1,4 @@
-import type { LevelInfo } from '@shared/types'
+import type { LevelInfo } from './types'
 
 /**
  * Level floors follow `100 · (n−1) · (n+2)`: 0, 400, 1000, 1800, 2800, 4000, 5400 …

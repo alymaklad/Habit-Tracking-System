@@ -29,6 +29,8 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    "src/renderer/lib/format.ts",
+    "src/renderer/lib/khatwa.ts"
   ]
 }

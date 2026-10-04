@@ -1,4 +1,4 @@
-import type { Goal, GoalResource, GoalStatus, MindMapNode } from '@shared/types'
+import type { Goal, GoalObstacle, GoalResource, GoalStatus, MindMapNode } from '@shared/types'
 import type { Db } from './db'
 
 interface GoalRow {
@@ -10,6 +10,7 @@ interface GoalRow {
   status: string
   mind_map_json: string
   resources_json: string
+  obstacles_json: string
   created_at: string
   closed_at: string | null
 }
@@ -32,6 +33,7 @@ function toGoal(r: GoalRow): Goal {
     status: r.status as GoalStatus,
     mindMap: parseJson<MindMapNode[]>(r.mind_map_json, []),
     resources: parseJson<GoalResource[]>(r.resources_json, []),
+    obstacles: parseJson<GoalObstacle[]>(r.obstacles_json ?? '[]', []),
     createdAt: r.created_at,
     closedAt: r.closed_at
   }
@@ -87,7 +89,10 @@ export function goalRepo(db: Db) {
       db.prepare('UPDATE goal SET status = ?, closed_at = ? WHERE id = ?').run(status, at, id)
     },
 
-    setPlanJson(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[] }): void {
+    setPlanJson(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[]; obstacles?: GoalObstacle[] }): void {
+      if (patch.obstacles !== undefined) {
+        db.prepare('UPDATE goal SET obstacles_json = ? WHERE id = ?').run(JSON.stringify(patch.obstacles), id)
+      }
       if (patch.mindMap !== undefined) {
         db.prepare('UPDATE goal SET mind_map_json = ? WHERE id = ?').run(JSON.stringify(patch.mindMap), id)
       }

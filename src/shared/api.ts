@@ -12,8 +12,20 @@ import type {
   GoalPlan,
   GoalPlanProgress,
   GoalResource,
+  Attachment,
+  GoalObstacle,
   GoalView,
+  GuideInsight,
+  SavedGoalDraft,
   Habit,
+  HabitDetailView,
+  JournalDraft,
+  JournalEntry,
+  LetGoCheckinInput,
+  LetGoDraft,
+  LetGoView,
+  Tool,
+  ToolDraft,
   HabitDraft,
   LocalDate,
   MindMapNode,
@@ -63,10 +75,12 @@ export interface HabitApi {
     achievements(): Promise<AchievementView[]>
     personalRecords(): Promise<PersonalRecordView[]>
     proposals(): Promise<DifficultyProposal[]>
+    habitDetail(habitId: number): Promise<HabitDetailView | null>
   }
 
   todo: {
-    addManual(title: string, date?: LocalDate): Promise<number>
+    /** `goalId` files the item as one of that mountain's milestones. */
+    addManual(title: string, date?: LocalDate, goalId?: number): Promise<number>
     addSubtask(occurrenceId: number, title: string): Promise<number>
     setDone(id: number, done: boolean): Promise<void>
     rename(id: number, title: string): Promise<void>
@@ -82,7 +96,52 @@ export interface HabitApi {
     reject(id: number): Promise<void>
   }
 
+  letGo: {
+    list(): Promise<LetGoView[]>
+    get(id: number): Promise<LetGoView | null>
+    create(draft: LetGoDraft): Promise<LetGoView>
+    update(id: number, draft: LetGoDraft): Promise<void>
+    /** One answer per day; answering again replaces it. Future days are refused. */
+    checkIn(id: number, date: LocalDate, input: LetGoCheckinInput): Promise<void>
+    clearCheckIn(id: number, date: LocalDate): Promise<void>
+    leaveBehind(id: number, vow: string | null): Promise<void>
+    pickUpAgain(id: number): Promise<void>
+    remove(id: number): Promise<void>
+  }
+
+  journal: {
+    list(): Promise<JournalEntry[]>
+    /** null creates; a monthly entry for a month that already has one updates it. */
+    save(id: number | null, draft: JournalDraft): Promise<JournalEntry>
+    remove(id: number): Promise<void>
+  }
+
+  attachments: {
+    /** Copies files in, unlinked until an entry is saved with their ids. null opens a file picker. */
+    import(paths: string[] | null): Promise<Attachment[]>
+    /** Removes a file not yet saved on an entry. */
+    discard(id: number): Promise<void>
+    setCaption(id: number, caption: string | null): Promise<void>
+    /** Opens a document in its default application. */
+    open(id: number): Promise<void>
+    pathForFile(file: File): string
+  }
+
+  tools: {
+    list(): Promise<Tool[]>
+    save(id: number | null, draft: ToolDraft): Promise<Tool>
+    remove(id: number): Promise<void>
+  }
+
+  guide: {
+    list(): Promise<GuideInsight[]>
+    dismiss(key: string): Promise<void>
+  }
+
   goals: {
+    /** The goal wizard put aside mid-way, if any. */
+    draft(): Promise<SavedGoalDraft | null>
+    saveDraft(draft: SavedGoalDraft | null): Promise<void>
     list(): Promise<GoalView[]>
     get(id: number): Promise<GoalView | null>
     /** Runs the planning loop; progress arrives on `on.goalProgress`. Nothing is saved. */
@@ -90,7 +149,7 @@ export interface HabitApi {
     commit(input: GoalDraftInput, plan: GoalPlan): Promise<GoalView>
     close(id: number, outcome: 'achieved' | 'abandoned'): Promise<void>
     reopen(id: number): Promise<void>
-    updatePlan(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[] }): Promise<void>
+    updatePlan(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[]; obstacles?: GoalObstacle[] }): Promise<void>
     remove(id: number): Promise<void>
   }
 

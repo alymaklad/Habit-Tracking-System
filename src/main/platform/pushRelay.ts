@@ -63,7 +63,7 @@ export function pushRelay(deps: { config: () => PushRelayConfig; log?: (m: strin
     /** Send a test message so the user can confirm their phone is subscribed. */
     async test(): Promise<boolean> {
       return this.send({
-        title: 'Adaptive Habit League',
+        title: 'Khatwa',
         body: 'Push notifications are working. You can close this.',
         priority: 3,
         tags: ['white_check_mark']

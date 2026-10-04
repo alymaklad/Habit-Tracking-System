@@ -26,23 +26,10 @@ function Segmented<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div style={{ display: 'flex' }}>
-      {options.map((o, i) => (
-        <button
-          key={o}
-          onClick={() => onChange(o)}
-          className="display"
-          style={{
-            padding: '5px 13px',
-            fontSize: 10.5,
-            letterSpacing: '0.1em',
-            marginLeft: i ? -1 : 0,
-            border: `1px solid ${value === o ? 'var(--accent)' : 'var(--line)'}`,
-            background: value === o ? 'var(--accent)' : 'transparent',
-            color: value === o ? 'var(--accent-ink)' : 'var(--dim)'
-          }}
-        >
-          {o.toUpperCase()}
+    <div className="kh-segmented">
+      {options.map((o) => (
+        <button key={o} onClick={() => onChange(o)} className={value === o ? 'is-on' : ''}>
+          {o[0]!.toUpperCase() + o.slice(1)}
         </button>
       ))}
     </div>
@@ -65,13 +52,13 @@ function Row({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 14,
-        paddingTop: 11,
+        paddingTop: 12,
         borderTop: '1px solid var(--line)'
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-        <span style={{ fontSize: 12 }}>{title}</span>
-        {hint ? <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{hint}</span> : null}
+        <span style={{ fontSize: 14 }}>{title}</span>
+        {hint ? <span style={{ fontSize: 12, color: 'var(--faint)' }}>{hint}</span> : null}
       </div>
       {children}
     </div>
@@ -269,16 +256,34 @@ export default function Settings({
   const connected = status && status.state !== 'disconnected'
 
   return (
-    <Screen title="Settings" subtitle="Account · sync · notifications · scoring">
+    <Screen title="Settings" subtitle="Folio · sync · notifications · scoring">
       <div
         style={{
-          padding: '18px 24px',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
-          gap: 16,
+          gap: 20,
           alignItems: 'start'
         }}
       >
+        {/* ------------------------------------------------ profile */}
+        <Card style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+          <CardTitle>Your folio</CardTitle>
+          <Field label="Your name" hint="Used in greetings and on your Me page. Leave blank to go unnamed.">
+            <input
+              className="kh-input is-display"
+              defaultValue={local.displayName}
+              placeholder="Aly"
+              onBlur={(e) => {
+                const next = e.target.value.trim()
+                if (next !== local.displayName) void save({ displayName: next })
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+              }}
+            />
+          </Field>
+        </Card>
+
         {/* ------------------------------------------------ Google */}
         <Card
           accent={
@@ -565,7 +570,7 @@ export default function Settings({
         {/* ------------------------------------------------ scoring */}
         <Card style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           <CardTitle>Scoring</CardTitle>
-          <Row title="Weekly points target" hint="0 turns the target off. Also editable on the Performance tab.">
+          <Row title="Weekly points target" hint="0 turns the target off. Tracked on the Calendar and in the Weekly Review.">
             <input
               type="number"
               min={0}
@@ -629,7 +634,7 @@ export default function Settings({
             <CardTitle>Appearance</CardTitle>
             <Segmented<ThemeMode>
               value={local.theme}
-              options={['dark', 'light', 'system'] as const}
+              options={['light', 'dark', 'system'] as const}
               onChange={(v) => void save({ theme: v })}
             />
           </div>
@@ -649,8 +654,9 @@ export default function Settings({
 }
 
 const stepper: React.CSSProperties = {
-  width: 22,
-  height: 22,
+  width: 26,
+  height: 26,
+  borderRadius: 6,
   border: '1px solid var(--line)',
   display: 'flex',
   alignItems: 'center',

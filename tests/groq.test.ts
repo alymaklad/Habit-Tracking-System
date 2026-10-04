@@ -3,6 +3,7 @@ import { AiError } from '@main/ai/anthropicClient'
 import { GoalPlanSchema } from '@main/ai/goalPlanSchema'
 import {
   GROQ_DEFAULT_MODEL,
+  GROQ_PLAN_MODELS,
   GROQ_RESEARCH_FALLBACK_MODEL,
   GROQ_RESEARCH_MODEL,
   groqClient,
@@ -141,7 +142,7 @@ describe('groqClient', () => {
       const f = fakeFetch([entityTooLarge, entityTooLarge, () => chat('', 'length')])
       const ai = groqClient({ apiKey: 'k', fetchImpl: f.impl })
       await expect(ai.research(prompt)).rejects.toThrow(
-        /groq\/compound: .*too large.* · groq\/compound-mini: .*too large.* · openai\/gpt-oss-120b: .*(cut off|empty)/
+        /groq\/compound: .*too large.* · groq\/compound-mini: .*too large.* · openai\/gpt-oss-20b: .*(cut off|empty)/
       )
     })
 
@@ -201,6 +202,42 @@ describe('groqClient', () => {
       const ai = groqClient({ apiKey: 'k', fetchImpl: f.impl, sleepImpl: async (ms) => void waits.push(ms) })
       await expect(ai.research(prompt)).rejects.toMatchObject({ kind: 'rate_limit' })
       expect(waits).toEqual([])
+    })
+
+    it('moves straight to the next plan model when the chosen one is rate-limited, and stays there', async () => {
+      const waits: number[] = []
+      const f = fakeFetch([
+        () => new Response('{}', { status: 429, headers: { 'retry-after': '3' } }),
+        () => chat(JSON.stringify(samplePlan())),
+        () => chat(JSON.stringify({ verdict: 'pass', feedback: [] }))
+      ])
+      const ai = groqClient({
+        apiKey: 'k',
+        model: 'openai/gpt-oss-20b',
+        fallbackModels: GROQ_PLAN_MODELS,
+        fetchImpl: f.impl,
+        sleepImpl: async (ms) => void waits.push(ms)
+      })
+      expect((await ai.finalize(prompt)).sessions).toHaveLength(2)
+      await ai.critique(prompt)
+      expect(f.calls.map((c) => c.body!.model)).toEqual(['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'openai/gpt-oss-120b'])
+      // No waiting while another model was free.
+      expect(waits).toEqual([])
+    })
+
+    it('waits on the last model, and names every model tried when all are rate-limited', async () => {
+      const busy = () => new Response('{}', { status: 429, headers: { 'retry-after': '1' } })
+      const f = fakeFetch([busy, busy, busy, busy, busy])
+      const ai = groqClient({
+        apiKey: 'k',
+        model: 'openai/gpt-oss-20b',
+        fallbackModels: ['openai/gpt-oss-120b'],
+        fetchImpl: f.impl,
+        sleepImpl: async () => undefined
+      })
+      await expect(ai.finalize(prompt)).rejects.toThrow('every model tried (openai/gpt-oss-20b, openai/gpt-oss-120b)')
+      // One fail-fast attempt on the first model, then the full retry budget on the last.
+      expect(f.calls).toHaveLength(5)
     })
 
     it('explains a 413 instead of echoing "Request Entity Too Large"', async () => {

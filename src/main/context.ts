@@ -1,5 +1,5 @@
 import type { AiProvider, AiStatus, SyncStatus, ToastMessage } from '@shared/types'
-import { openDatabase } from './persistence/db'
+import { closeDatabase, dailyBackup, openDatabase } from './persistence/db'
 import { habitRepo } from './persistence/habitRepo'
 import { occurrenceRepo } from './persistence/occurrenceRepo'
 import { logRepo } from './persistence/logRepo'
@@ -8,6 +8,12 @@ import { settingsRepo } from './persistence/settingsRepo'
 import { syncRepo } from './persistence/syncRepo'
 import { todoRepo } from './persistence/todoRepo'
 import { goalRepo } from './persistence/goalRepo'
+import { letGoRepo } from './persistence/letGoRepo'
+import { journalRepo } from './persistence/journalRepo'
+import { reflectService } from './application/reflectService'
+import { attachmentStore } from './platform/attachmentStore'
+import { dirname as pathDirname, join as pathJoin } from 'node:path'
+import { tmpdir } from 'node:os'
 import { scheduleService } from './application/scheduleService'
 import { recomputeService } from './application/recomputeService'
 import { habitService } from './application/habitService'
@@ -31,6 +37,8 @@ import { ACHIEVEMENTS } from './domain/achievements'
 
 export interface ContextOptions {
   dbPath: string
+  /** Where journal attachments are copied. Defaults to a folder beside the database. */
+  attachmentsDir?: string
   /** Fires a native OS notification. Injected so the app layer stays testable. */
   toast: (title: string, body: string) => void
   onSyncStatus: (status: SyncStatus) => void
@@ -53,9 +61,12 @@ export function createContext(opts: ContextOptions) {
   const logs = logRepo(db)
   const records = recordRepo(db)
   const settings = settingsRepo(db)
+  settings.adoptKhatwaTheme()
   const sync = syncRepo(db)
   const todos = todoRepo(db)
   const goals = goalRepo(db)
+  const letGo = letGoRepo(db)
+  const journal = journalRepo(db)
 
   const schedule = scheduleService({ db, habits, occurrences, settings })
   const engine = recomputeService({ db, habits, occurrences, logs, records, settings })
@@ -120,6 +131,17 @@ export function createContext(opts: ContextOptions) {
       if (!apiKey) throw new Error(`Add a ${PROVIDERS[provider].label} API key in Settings to draft a plan.`)
       return anthropicGoalPlanner({ ai: PROVIDERS[provider].create(apiKey, aiModel(provider)) })
     }
+  })
+
+  const reflect = reflectService({
+    letGo,
+    journal,
+    goals,
+    settings,
+    files: attachmentStore(
+      opts.attachmentsDir ?? (opts.dbPath === ':memory:' ? pathJoin(tmpdir(), `khatwa-attachments-${process.pid}`) : pathJoin(pathDirname(opts.dbPath), 'attachments'))
+    ),
+    goalViews: () => goalsApi.list()
   })
 
   const views = viewService({
@@ -227,12 +249,13 @@ export function createContext(opts: ContextOptions) {
   return {
     // The database handle deliberately stays inside the context: everything outside
     // goes through a repository or a service.
-    repos: { habits, occurrences, logs, records, settings, sync, todos, goals },
+    repos: { habits, occurrences, logs, records, settings, sync, todos, goals, letGo, journal },
     schedule,
     engine,
     habits: habitsApi,
     todos: todosApi,
     goals: goalsApi,
+    reflect,
     views,
     notifications,
     reminders,
@@ -274,13 +297,19 @@ export function createContext(opts: ContextOptions) {
       }
     },
 
+    /** Today's copy into a `backups` folder beside the database; a no-op for in-memory ones. */
+    backupDaily(date: string): Promise<string | null> {
+      if (opts.dbPath === ':memory:') return Promise.resolve(null)
+      return dailyBackup(db, pathJoin(pathDirname(opts.dbPath), 'backups'), date)
+    },
+
     dispose(): void {
       orchestrator.stop()
       reminders.stop()
       // Close any timer that is still running so its minutes are not lost on quit.
       const running = logs.anyRunning()
       if (running?.occurrenceId) logs.stop(running.occurrenceId, new Date().toISOString())
-      db.close()
+      closeDatabase(db)
     }
   }
 }

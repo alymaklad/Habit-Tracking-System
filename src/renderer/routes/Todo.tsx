@@ -1,362 +1,209 @@
 import { useState } from 'react'
-import type { TodoGroup, TodoItem } from '@shared/types'
-import Screen from '../components/Screen'
-import Icon from '../components/Icon'
-import { Bar, Button, Card, CardTitle, ErrorState, Label, Loading } from '../components/ui'
+import { ArrowRight, ChevronLeft, ChevronRight, Clock, Flame, Plus, Trash2, X } from 'lucide-react'
+import type { TodoItem, TodoView } from '@shared/types'
 import { useData } from '../hooks/useData'
-import { addDays, toLocalDate } from '../lib/format'
+import { addDays } from '../lib/format'
+import { longDate, plural, time12, today } from '../lib/khatwa'
+import { useShell } from '../khatwa/nav'
+import { Page, PageHead } from '../khatwa/Page'
+import { Alert, Btn, CheckBox, Dot, IconBtn, LoadError, Loading, Stamp } from '../khatwa/ui'
 
-function Checkbox({ done, onToggle }: { done: boolean; onToggle: () => void }) {
+function ItemRow({ item, run, anchor }: { item: TodoItem; run: (fn: () => Promise<unknown>) => void; anchor: string }) {
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(item.title)
   return (
-    <button
-      onClick={onToggle}
-      role="checkbox"
-      aria-checked={done}
-      style={{
-        width: 18,
-        height: 18,
-        flexShrink: 0,
-        border: `1px solid ${done ? 'var(--ok)' : 'var(--line)'}`,
-        background: done ? 'var(--ok)' : 'transparent',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'background .12s ease, border-color .12s ease'
-      }}
-    >
-      {done ? <Icon name="check" size={11} color="var(--accent-ink)" strokeWidth={3} /> : null}
-    </button>
-  )
-}
-
-function Row({ item, onChanged }: { item: TodoItem; onChanged: () => void }) {
-  const [busy, setBusy] = useState(false)
-
-  const act = async (fn: () => Promise<unknown>): Promise<void> => {
-    setBusy(true)
-    try {
-      await fn()
-      onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 11,
-        padding: '9px 12px',
-        background: item.done ? 'transparent' : 'var(--panel)',
-        border: `1px solid ${item.overdue ? 'var(--bad)' : 'var(--line)'}`,
-        opacity: item.done ? 0.55 : 1,
-        minWidth: 0
-      }}
-    >
-      <Checkbox
-        done={item.done}
-        onToggle={() => void act(() => window.api.todo.setDone(item.id, !item.done))}
-      />
-
-      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-        <span
-          style={{
-            fontSize: 13,
-            textDecoration: item.done ? 'line-through' : 'none',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}
-        >
-          {item.title}
+    <div className={`kh-row !py-3 group ${item.done ? 'is-done' : ''}`}>
+      <CheckBox small={item.kind === 'subtask'} state={item.done ? 'done' : 'open'} label={item.done ? `Reopen ${item.title}` : `Mark ${item.title} done`} onClick={() => run(() => window.api.todo.setDone(item.id, !item.done))} />
+      <div className="flex flex-col flex-1 min-w-0 gap-1">
+        {editing ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              setEditing(false)
+              if (title.trim() && title.trim() !== item.title) run(() => window.api.todo.rename(item.id, title.trim()))
+            }}
+          >
+            <input className="kh-input !py-1 !text-[15px]" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => setEditing(false)} />
+          </form>
+        ) : (
+          <button className={`text-left text-[15px] ${item.done ? 'line-through text-ink-4' : ''}`} onDoubleClick={() => setEditing(true)} title="Double-click to rename">
+            {item.title}
+          </button>
+        )}
+        <span className="flex flex-wrap gap-1.5">
+          <Stamp tone={item.kind === 'manual' ? 'slate' : 'laurel'} className="!text-[10px] !py-0">
+            {item.kind === 'manual' ? 'Manual' : `Step · ${item.habitName}`}
+          </Stamp>
+          {item.carried > 0 && !item.done ? <Stamp tone="ochre" className="!text-[10px] !py-0">Carried {plural(item.carried, 'day')}</Stamp> : null}
+          {item.overdue && !item.done ? <Stamp tone="ochre-solid" className="!text-[10px] !py-0">Overdue</Stamp> : null}
+          {item.done ? <Stamp className="!text-[10px] !py-0">Done</Stamp> : null}
         </span>
-
-        {item.carried > 0 || item.overdue ? (
-          <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {item.carried > 0 ? (
-              <span
-                style={{ fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--gold)' }}
-                title="Pushed forward without being finished"
-              >
-                CARRIED {item.carried}D
-              </span>
-            ) : null}
-            {item.overdue && !item.done ? (
-              <span style={{ fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--bad)' }}>
-                OVERDUE
-              </span>
-            ) : null}
-          </span>
-        ) : null}
       </div>
-
-      {/* The time is deliberately not repeated per row — the group header carries it,
-          and printing it on every step just adds noise. */}
-      <button
-        disabled={busy}
-        title={item.kind === 'manual' ? 'Delete' : 'Drop this step'}
-        onClick={() =>
-          void act(() =>
-            item.kind === 'manual' ? window.api.todo.remove(item.id) : window.api.todo.drop(item.id)
-          )
-        }
-        style={{ color: 'var(--faint)', flexShrink: 0, padding: 2 }}
-      >
-        <Icon name="close" size={13} strokeWidth={2} />
-      </button>
+      {item.kind === 'manual' && !item.done ? (
+        <span className="opacity-0 group-hover:opacity-100 flex">
+          <IconBtn title="Move to tomorrow" onClick={() => run(() => window.api.todo.reschedule(item.id, addDays(anchor, 1)))}>
+            <ArrowRight size={14} />
+          </IconBtn>
+          <IconBtn title="Set aside" onClick={() => run(() => window.api.todo.drop(item.id))}>
+            <X size={14} />
+          </IconBtn>
+        </span>
+      ) : null}
+      {item.kind === 'subtask' ? (
+        <span className="opacity-0 group-hover:opacity-100">
+          <IconBtn title="Remove step" onClick={() => run(() => window.api.todo.remove(item.id))}>
+            <Trash2 size={14} />
+          </IconBtn>
+        </span>
+      ) : null}
     </div>
   )
 }
 
-function Group({ group, onChanged }: { group: TodoGroup; onChanged: () => void }) {
-  const [adding, setAdding] = useState('')
-  const isHabit = group.habitId !== null
-  const pct = group.total > 0 ? (group.done / group.total) * 100 : 0
-
-  const submit = async (): Promise<void> => {
-    const title = adding.trim()
-    if (!title) return
-    setAdding('')
-    if (isHabit && group.occurrenceId !== null) {
-      await window.api.todo.addSubtask(group.occurrenceId, title)
-    } else {
-      await window.api.todo.addManual(title)
-    }
-    onChanged()
-  }
-
-  return (
-    <Card
-      accent={isHabit && group.habitComplete ? 'var(--ok)' : 'var(--line)'}
-      style={{ display: 'flex', flexDirection: 'column', gap: 11, minWidth: 0 }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-          <CardTitle>{isHabit ? group.habitName : 'One-off tasks'}</CardTitle>
-          {isHabit && group.scheduledTime ? (
-            <span className="num" style={{ fontSize: 11, color: 'var(--faint)' }}>
-              {group.scheduledTime}
-            </span>
-          ) : null}
-          {isHabit && group.habitComplete ? (
-            <span
-              className="display"
-              style={{
-                fontSize: 9,
-                letterSpacing: '0.1em',
-                color: 'var(--ok)',
-                border: '1px solid var(--ok)',
-                padding: '1px 5px'
-              }}
-            >
-              HABIT DONE
-            </span>
-          ) : null}
-        </div>
-        <span className="num" style={{ fontSize: 13, color: 'var(--dim)' }}>
-          {group.done}/{group.total}
-        </span>
-      </div>
-
-      <Bar value={pct} color={group.done === group.total ? 'var(--ok)' : 'var(--accent)'} height={3} />
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {group.items.map((item) => (
-          <Row key={item.id} item={item} onChanged={onChanged} />
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input
-          value={adding}
-          placeholder={isHabit ? 'Add a step…' : 'Add a task…'}
-          onChange={(e) => setAdding(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void submit()
-          }}
-        />
-        <Button onClick={() => void submit()} disabled={!adding.trim()}>
-          ADD
-        </Button>
-      </div>
-
-      {isHabit ? (
-        <span style={{ fontSize: 10.5, lineHeight: 1.5, color: 'var(--faint)', textWrap: 'pretty' }}>
-          Ticking every step marks {group.habitName} complete. Un-ticking one reopens it and takes
-          the points back.
-        </span>
-      ) : null}
-    </Card>
-  )
-}
-
 export default function Todo() {
-  const { data, error, loading, refetch } = useData(() => window.api.view.todos(), [])
+  const { navigate } = useShell()
+  const [anchor, setAnchor] = useState(today())
   const [draft, setDraft] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const { data, error: loadError, refetch } = useData<TodoView>(() => window.api.view.todos(anchor), [anchor])
 
-  if (error) {
-    return (
-      <Screen title="To-do">
-        <ErrorState message={error} onRetry={refetch} />
-      </Screen>
-    )
-  }
-  if (loading && !data) {
-    return (
-      <Screen title="To-do">
-        <Loading />
-      </Screen>
-    )
-  }
-  if (!data) return null
-
-  const add = async (): Promise<void> => {
-    const title = draft.trim()
-    if (!title) return
-    setDraft('')
-    await window.api.todo.addManual(title)
-    refetch()
+  const run = (fn: () => Promise<unknown>): void => {
+    setError(null)
+    fn().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
   }
 
-  const totalDone = data.manualDone + data.subtaskDone
-  const total = data.manualTotal + data.subtaskTotal
+  if (loadError) return <Page><LoadError message={loadError} onRetry={refetch} /></Page>
+  if (!data) return <Page><Loading label="Unfolding the list…" /></Page>
+
+  const manual = data.items.filter((i) => i.kind === 'manual' && !i.dropped)
+  const dropped = data.items.filter((i) => i.kind === 'manual' && i.dropped)
+  const groups = data.groups.filter((g) => g.habitId !== null)
 
   return (
-    <Screen
-      title="To-do"
-      subtitle={`${data.date} · ${totalDone} of ${total} done${
-        data.carriedCount > 0 ? ` · ${data.carriedCount} carried` : ''
-      }`}
-      actions={
-        <div style={{ display: 'flex', gap: 8, flexGrow: 1, maxWidth: 420 }}>
-          <input
-            value={draft}
-            placeholder="Add a task and press Enter…"
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void add()
-            }}
-          />
-          <Button kind="solid" onClick={() => void add()} disabled={!draft.trim()}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Icon name="plus" size={12} strokeWidth={2.2} />
-              ADD
-            </span>
-          </Button>
+    <Page narrow>
+      <PageHead
+        eyebrow={
+          <>
+            To-do <Dot /> <span className="is-quiet">Manual items carry forward · habit steps complete their habit</span>
+          </>
+        }
+        title={anchor === today() ? 'Today’s list' : longDate(anchor)}
+        aside={
+          <div className="flex items-center gap-2">
+            <IconBtn title="Previous day" onClick={() => setAnchor(addDays(anchor, -1))}>
+              <ChevronLeft size={16} />
+            </IconBtn>
+            <Btn kind="soft" size="sm" onClick={() => setAnchor(today())}>
+              Today
+            </Btn>
+            <IconBtn title="Next day" onClick={() => setAnchor(addDays(anchor, 1))}>
+              <ChevronRight size={16} />
+            </IconBtn>
+          </div>
+        }
+      />
+
+      {error ? <div className="mb-5"><Alert>{error}</Alert></div> : null}
+
+      {data.avoidance.map((a) => (
+        <div key={a.todoId} className="kh-alert is-ochre mb-4">
+          <Flame size={16} className="shrink-0 mt-0.5" />
+          <span>{a.message}</span>
         </div>
-      }
-    >
-      <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* ------------------------------------------ what you keep avoiding */}
-        {data.avoidance.length > 0 ? (
-          <Card accent="var(--gold)" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <Icon name="warning" size={16} color="var(--gold)" strokeWidth={1.8} />
-              <CardTitle>Keeps getting pushed back</CardTitle>
-            </div>
-            {data.avoidance.map((a) => (
-              <div
-                key={a.todoId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 12px',
-                  background: 'var(--bg)',
-                  border: '1px solid var(--line)',
-                  flexWrap: 'wrap'
-                }}
-              >
-                <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 180 }}>
-                  <span style={{ fontSize: 12.5 }}>{a.title}</span>
-                  <span style={{ fontSize: 10.5, color: 'var(--faint)', textWrap: 'pretty' }}>
-                    {a.message}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button
-                    onClick={async () => {
-                      await window.api.todo.reschedule(a.todoId, addDays(toLocalDate(new Date()), 7))
-                      refetch()
-                    }}
-                  >
-                    NEXT WEEK
-                  </Button>
-                  <Button
-                    kind="danger"
-                    onClick={async () => {
-                      await window.api.todo.drop(a.todoId)
-                      refetch()
-                    }}
-                  >
-                    DROP IT
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </Card>
-        ) : null}
+      ))}
 
-        {/* ------------------------------------------------------ suggestions */}
-        {data.suggestions.length > 0 ? (
-          <Card style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Label>Suggested from your history</Label>
-            {data.suggestions.map((s) => (
-              <div
-                key={s.title}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
-              >
-                <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 180 }}>
-                  <span style={{ fontSize: 12.5 }}>{s.title}</span>
-                  <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{s.reason}</span>
-                </div>
-                <Button
-                  kind="solid"
-                  onClick={async () => {
-                    await window.api.todo.addManual(s.title)
-                    refetch()
-                  }}
-                >
-                  ADD
-                </Button>
-              </div>
+      <section className="mb-10">
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="t-h2 m-0">Manual items</h2>
+          <span className="t-caption">
+            {data.manualDone} of {data.manualTotal} done · ticking one earns no XP — it is simply done
+          </span>
+        </div>
+        <form
+          className="kh-card px-4 py-3 flex items-center gap-3 mb-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const t = draft.trim()
+            if (!t) return
+            setDraft('')
+            run(() => window.api.todo.addManual(t, anchor))
+          }}
+        >
+          <Plus size={16} className="text-ink-4" />
+          <input className="kh-input !border-0 !text-[15px]" value={draft} placeholder="Add something to do on this day…" onChange={(e) => setDraft(e.target.value)} />
+          <Btn kind="laurel" size="sm" type="submit" disabled={!draft.trim()}>
+            Add
+          </Btn>
+        </form>
+        <div className="flex flex-col gap-2">
+          {manual.length === 0 ? <span className="t-italic !text-[14px] px-1">Nothing pinned to this day.</span> : null}
+          {manual.map((i) => (
+            <ItemRow key={i.id} item={i} run={run} anchor={anchor} />
+          ))}
+        </div>
+        {manual.length === 0 && data.suggestions.length ? (
+          <div className="mt-4 flex flex-col gap-1.5">
+            <span className="t-stamp text-ink-4">Perhaps</span>
+            {data.suggestions.slice(0, 4).map((s) => (
+              <button key={s.title} className="text-left group" title={s.reason} onClick={() => run(() => window.api.todo.addManual(s.title, anchor))}>
+                <span className="font-serif italic text-[15px] text-ink-3 group-hover:text-ink">+ {s.title}</span>
+                <span className="t-caption ml-2">{s.reason}</span>
+              </button>
             ))}
-          </Card>
+          </div>
         ) : null}
+      </section>
 
-        {/* ----------------------------------------------------------- groups */}
-        {data.groups.length === 0 ? (
-          <Card style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <CardTitle>Nothing on the list</CardTitle>
-            <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--dim)', textWrap: 'pretty' }}>
-              Add a one-off task above, or break a habit into steps — tick every step and the habit
-              itself is marked complete. Unfinished tasks follow you into tomorrow rather than being
-              quietly lost.
-            </span>
-          </Card>
+      <section className="mb-10">
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="t-h2 m-0">Habit steps</h2>
+          <span className="t-caption">Ticking the last step completes the habit; un-ticking one reopens it</span>
+        </div>
+        {groups.length === 0 ? (
+          <span className="t-italic !text-[14px] px-1">No habit on this day has steps. Add default steps in a habit’s editor.</span>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-              gap: 14,
-              alignItems: 'start'
-            }}
-          >
-            {data.groups.map((g) => (
-              <Group key={g.occurrenceId ?? 'manual'} group={g} onChanged={refetch} />
+          <div className="flex flex-col gap-5">
+            {groups.map((g) => (
+              <div key={g.occurrenceId} className="kh-sheet p-4 flex flex-col gap-2">
+                <button className="flex items-center justify-between gap-3 text-left" onClick={() => g.habitId !== null && navigate({ name: 'habit', id: g.habitId })}>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[16px] font-semibold">{g.habitName}</span>
+                    {g.scheduledTime ? (
+                      <span className="t-caption flex items-center gap-1">
+                        <Clock size={12} /> {time12(g.scheduledTime)}
+                      </span>
+                    ) : null}
+                  </span>
+                  <Stamp tone={g.habitComplete ? 'laurel' : 'plain'} className="!text-[10px]">
+                    {g.habitComplete ? 'Habit complete' : `${g.done}/${g.total} steps`}
+                  </Stamp>
+                </button>
+                {g.items
+                  .filter((i) => !i.dropped)
+                  .map((i) => (
+                    <ItemRow key={i.id} item={i} run={run} anchor={anchor} />
+                  ))}
+              </div>
             ))}
           </div>
         )}
+      </section>
 
-        <span style={{ fontSize: 10.5, lineHeight: 1.5, color: 'var(--faint)', textWrap: 'pretty' }}>
-          One-off tasks are tracked separately and never affect your points, XP or level — those
-          measure habit improvement against a target, and anything you can type and tick instantly
-          would make them meaningless. Habit steps do count, through the habit they belong to.
-        </span>
-      </div>
-    </Screen>
+      {dropped.length ? (
+        <section>
+          <h2 className="t-h3 mb-2">Set aside</h2>
+          <div className="flex flex-col gap-1">
+            {dropped.map((i) => (
+              <div key={i.id} className="flex items-center gap-3 px-2 py-1.5 text-ink-4">
+                <span className="flex-1 line-through">{i.title}</span>
+                <IconBtn title="Delete permanently" onClick={() => run(() => window.api.todo.remove(i.id))}>
+                  <Trash2 size={13} />
+                </IconBtn>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </Page>
   )
 }

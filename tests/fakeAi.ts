@@ -1,5 +1,5 @@
 import type { GoalDraftInput, GoalPlan } from '@shared/types'
-import type { AiClient, FetchedPage, PageToJudge, Prompt } from '@main/ai/anthropicClient'
+import { AiError, type AiClient, type FetchedPage, type PageToJudge, type Prompt } from '@main/ai/anthropicClient'
 import type { Critique, RawGoalPlan } from '@main/ai/goalPlanSchema'
 import type { GoalPlanner, PlanningContext } from '@main/ai/types'
 
@@ -40,6 +40,18 @@ export class FakeAi implements AiClient {
   pages = new Map<string, FetchedPage>()
   /** URLs the relevance judge should call off-topic. */
   offTopic = new Set<string>()
+  /** From the Nth call of a kind (1-based) onwards, that kind answers with a rate limit. */
+  limitFrom: Partial<Record<'research' | 'finalize' | 'critique', number>> = {}
+  waitListener: ((ms: number) => void) | null = null
+
+  setWaitListener(listener: ((ms: number) => void) | null): void {
+    this.waitListener = listener
+  }
+
+  private limit(kind: 'research' | 'finalize' | 'critique'): void {
+    const from = this.limitFrom[kind]
+    if (from !== undefined && this.count(kind) >= from) throw new AiError('The AI provider is rate-limiting requests.', 'rate_limit')
+  }
 
   readonly calls: {
     kind: 'research' | 'finalize' | 'critique' | 'fetch' | 'judge'
@@ -50,17 +62,20 @@ export class FakeAi implements AiClient {
 
   async research(prompt: Prompt): Promise<string> {
     this.calls.push({ kind: 'research', prompt })
+    this.limit('research')
     return this.researchText
   }
 
   async finalize(prompt: Prompt): Promise<RawGoalPlan> {
     this.calls.push({ kind: 'finalize', prompt })
+    this.limit('finalize')
     const next = this.drafts.length > 1 ? this.drafts.shift()! : this.drafts[0]!
     return next
   }
 
   async critique(prompt: Prompt): Promise<Critique> {
     this.calls.push({ kind: 'critique', prompt })
+    this.limit('critique')
     const next = this.critiques.length > 1 ? this.critiques.shift()! : this.critiques[0]!
     return next
   }
@@ -93,6 +108,6 @@ export class FakeGoalPlanner implements GoalPlanner {
   async plan(input: GoalDraftInput, context: PlanningContext) {
     this.lastInput = input
     this.lastContext = context
-    return { plan: this.result, iterations: 1, warnings: [] }
+    return { plan: this.result, iterations: 1, warnings: [], notes: [] }
   }
 }

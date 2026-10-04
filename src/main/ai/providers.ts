@@ -1,6 +1,6 @@
 import type { AiProvider } from '@shared/types'
 import { anthropicClient, DEFAULT_MODEL as ANTHROPIC_DEFAULT_MODEL, type AiClient } from './anthropicClient'
-import { GROQ_DEFAULT_MODEL, groqClient } from './groqClient'
+import { GROQ_DEFAULT_MODEL, GROQ_PLAN_MODELS, groqClient } from './groqClient'
 
 export interface ProviderInfo {
   id: AiProvider
@@ -30,8 +30,8 @@ export const PROVIDERS: Record<AiProvider, ProviderInfo> = {
     label: 'Groq',
     defaultModel: GROQ_DEFAULT_MODEL,
     keyPlaceholder: 'gsk_…',
-    note: 'Research runs on groq/compound (built-in search); this model drafts and reviews the plan. It needs JSON-schema support — openai/gpt-oss-120b, openai/gpt-oss-20b or qwen/qwen3.8-27b.',
-    create: (apiKey, model) => groqClient({ apiKey, model })
+    note: 'Research runs on groq/compound (built-in search); this model drafts and reviews the plan. It needs JSON-schema support — openai/gpt-oss-20b or openai/gpt-oss-120b; if the chosen one is rate-limited, the other takes over.',
+    create: (apiKey, model) => groqClient({ apiKey, model, fallbackModels: GROQ_PLAN_MODELS })
   }
 }
 

@@ -325,8 +325,8 @@ describe('goalPlanner loop', () => {
     expect(result.iterations).toBe(3)
     expect(ai.count('finalize')).toBe(3)
     expect(ai.count('critique')).toBe(3)
-    expect(result.warnings[0]).toMatch(/still had concerns after 3 attempts/)
-    expect(result.warnings).toContain('Still too ambitious.')
+    // One list, worded for the user, with no heading line mixed into it.
+    expect(result.warnings).toEqual(['Still too ambitious.'])
     expect(result.plan.sessions.length).toBeGreaterThan(0)
   })
 

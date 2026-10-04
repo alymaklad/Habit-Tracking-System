@@ -1,12 +1,14 @@
 import type {
   GoalDraftInput,
   GoalDraftResult,
+  GoalObstacle,
   GoalPlan,
   GoalResource,
   GoalView,
   Habit,
   HabitDraft,
-  MindMapNode
+  MindMapNode,
+  SavedGoalDraft
 } from '@shared/types'
 import type { GoalPlanner, OccupiedBlock, PlanningContext, ProgressCallback } from '../ai/types'
 import { toMinutes } from '../ai/scheduleConflicts'
@@ -192,8 +194,30 @@ export function goalService(deps: {
       })
     },
 
-    updatePlan(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[] }): void {
+    updatePlan(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[]; obstacles?: GoalObstacle[] }): void {
+      if (patch.obstacles !== undefined) {
+        const milestoneIds = new Set(todoRepo.listByGoal(id).map((m) => m.id))
+        patch = {
+          ...patch,
+          obstacles: patch.obstacles.map((o) => {
+            const title = o.title?.trim()
+            if (!title) throw new Error('Name what stands in the way')
+            if (o.nearMilestoneId !== null && !milestoneIds.has(o.nearMilestoneId)) throw new Error('That waypoint is no longer on this mountain')
+            return { id: String(o.id), title, note: o.note?.trim() || null, nearMilestoneId: o.nearMilestoneId, passed: !!o.passed }
+          })
+        }
+      }
       goals.setPlanJson(id, patch)
+    },
+
+    /** The wizard's one saved draft; null clears it. */
+    draft(): SavedGoalDraft | null {
+      return settings.getFlag<SavedGoalDraft | null>('goalDraft', null)
+    },
+
+    saveDraft(draft: SavedGoalDraft | null): void {
+      if (draft !== null && !draft.title?.trim() && !draft.plan) throw new Error('Name the mountain before saving a draft')
+      settings.setFlag('goalDraft', draft === null ? null : { ...draft, savedAt: new Date().toISOString() })
     },
 
     /** Removes the goal only; its habits and to-dos keep their history, unlinked. */

@@ -1,14 +1,21 @@
-import { app, ipcMain, shell } from 'electron'
+import { app, dialog, ipcMain, shell } from 'electron'
+import { ATTACHMENT_EXTENSIONS } from '../platform/attachmentStore'
 import {
   PUSH_CHANNELS,
   type AiProvider,
   type AppSettings,
   type GoalDraftInput,
   type GoalPlan,
+  type GoalObstacle,
   type GoalResource,
+  type SavedGoalDraft,
   type HabitDraft,
   type LocalDate,
-  type MindMapNode
+  type MindMapNode,
+  type JournalDraft,
+  type LetGoCheckinInput,
+  type LetGoDraft,
+  type ToolDraft
 } from '@shared/types'
 import type { AppContext } from '../context'
 
@@ -101,10 +108,63 @@ export function registerIpc(
   handle('view:achievements', () => ctx.views.achievements())
   handle('view:personalRecords', () => ctx.views.personalRecords())
   handle('view:proposals', () => ctx.views.proposals())
+  handle('view:habitDetail', (habitId: number) => ctx.views.habitDetail(habitId))
+
+  // ------------------------------------------------------ let go & journal
+
+  handle('letGo:list', () => ctx.reflect.letGoList())
+  handle('letGo:get', (id: number) => ctx.reflect.letGoGet(id))
+  mutate('letGo:create', (draft: LetGoDraft) => ctx.reflect.letGoCreate(draft))
+  mutate('letGo:update', (id: number, draft: LetGoDraft) => ctx.reflect.letGoUpdate(id, draft))
+  mutate('letGo:checkIn', (id: number, date: LocalDate, input: LetGoCheckinInput) => ctx.reflect.checkIn(id, date, input))
+  mutate('letGo:clearCheckIn', (id: number, date: LocalDate) => ctx.reflect.clearCheckIn(id, date))
+  mutate('letGo:leaveBehind', (id: number, vow: string | null) => ctx.reflect.leaveBehind(id, vow))
+  mutate('letGo:pickUpAgain', (id: number) => ctx.reflect.pickUpAgain(id))
+  mutate('letGo:remove', (id: number) => ctx.reflect.letGoRemove(id))
+
+  handle('journal:list', () => ctx.reflect.journalList())
+  mutate('journal:save', (id: number | null, draft: JournalDraft) => ctx.reflect.journalSave(id, draft))
+  mutate('journal:remove', (id: number) => ctx.reflect.journalRemove(id))
+
+  // Imported files stay unlinked (and invisible elsewhere) until their entry is saved,
+  // so importing is not a data change the other screens need to hear about.
+  handle('attachments:import', async (paths: string[] | null) => {
+    let chosen = paths
+    if (!chosen) {
+      const r = await dialog.showOpenDialog({
+        title: 'Add to the journal',
+        properties: ['openFile', 'multiSelections'],
+        filters: [
+          { name: 'Photos and documents', extensions: ATTACHMENT_EXTENSIONS },
+          { name: 'Photos', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }
+        ]
+      })
+      if (r.canceled) return []
+      chosen = r.filePaths
+    }
+    return ctx.reflect.importAttachments(chosen.slice(0, 12))
+  })
+  handle('attachments:discard', (id: number) => ctx.reflect.discardAttachment(id))
+  mutate('attachments:setCaption', (id: number, caption: string | null) => ctx.reflect.setCaption(id, caption))
+  handle('attachments:open', async (id: number) => {
+    const p = ctx.reflect.attachmentPath(id)
+    if (!p) throw new Error('That file is no longer attached')
+    const failed = await shell.openPath(p)
+    if (failed) throw new Error(failed)
+  })
+
+  handle('tools:list', () => ctx.reflect.tools())
+  mutate('tools:save', (id: number | null, draft: ToolDraft) => ctx.reflect.toolSave(id, draft))
+  mutate('tools:remove', (id: number) => ctx.reflect.toolRemove(id))
+
+  handle('guide:list', () => ctx.reflect.guide())
+  mutate('guide:dismiss', (key: string) => ctx.reflect.dismissInsight(key))
 
   // ------------------------------------------------------------- to-do
 
-  mutate('todo:addManual', (title: string, date?: LocalDate) => ctx.todos.addManual(title, date))
+  mutate('todo:addManual', (title: string, date?: LocalDate, goalId?: number) =>
+    ctx.todos.addManual(title, date, new Date(), { goalId: goalId ?? null })
+  )
   mutate('todo:addSubtask', (occurrenceId: number, title: string) =>
     ctx.todos.addSubtask(occurrenceId, title)
   )
@@ -171,7 +231,9 @@ export function registerIpc(
   mutate('goals:commit', (input: GoalDraftInput, plan: GoalPlan) => ctx.goals.commit(input, plan))
   mutate('goals:close', (id: number, outcome: 'achieved' | 'abandoned') => ctx.goals.close(id, outcome))
   mutate('goals:reopen', (id: number) => ctx.goals.reopen(id))
-  mutate('goals:updatePlan', (id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[] }) =>
+  handle('goals:draft', () => ctx.goals.draft())
+  mutate('goals:saveDraft', (draft: SavedGoalDraft | null) => ctx.goals.saveDraft(draft))
+  mutate('goals:updatePlan', (id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[]; obstacles?: GoalObstacle[] }) =>
     ctx.goals.updatePlan(id, patch)
   )
   mutate('goals:remove', (id: number) => ctx.goals.remove(id))

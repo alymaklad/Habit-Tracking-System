@@ -1,4 +1,4 @@
-import type { GoalDraftInput, GoalPlan, GoalPlanProgress, LocalDate } from '@shared/types'
+import type { GoalDraftInput, GoalDraftResult, GoalPlanProgress, LocalDate } from '@shared/types'
 
 /** A recurring block of time already committed, derived from an active habit. */
 export interface OccupiedBlock {
@@ -30,5 +30,5 @@ export interface GoalPlanner {
     input: GoalDraftInput,
     context: PlanningContext,
     onProgress?: ProgressCallback
-  ): Promise<{ plan: GoalPlan; iterations: number; warnings: string[] }>
+  ): Promise<GoalDraftResult>
 }

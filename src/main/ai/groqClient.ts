@@ -22,7 +22,12 @@ export const GROQ_RESEARCH_MODEL = 'groq/compound'
 /** Single-tool-call sibling of compound — lighter, and a second chance when compound refuses. */
 export const GROQ_RESEARCH_FALLBACK_MODEL = 'groq/compound-mini'
 /** Supports strict JSON-schema output, which the finalize and critique steps rely on. */
-export const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-120b'
+export const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-20b'
+/**
+ * Plan models that support that JSON-schema output. Groq counts rate limits per model, so
+ * when one is busy the next is a legitimate second chance on the same key.
+ */
+export const GROQ_PLAN_MODELS = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']
 
 /**
  * Groq's free tier caps tokens per request and per minute far below Anthropic's, and a
@@ -112,14 +117,26 @@ function textOf(html: string): string {
 export function groqClient(opts: {
   apiKey: string
   model?: string
+  /** Tried in order when the plan model is rate-limited. */
+  fallbackModels?: string[]
   researchModel?: string
   fetchImpl?: FetchLike
   sleepImpl?: SleepLike
 }): AiClient {
   const model = opts.model ?? GROQ_DEFAULT_MODEL
+  const planModels = [...new Set([model, ...(opts.fallbackModels ?? [])])]
+  /** Models that answered 429 during this client's life; skipped from then on. */
+  const limited = new Set<string>()
+  /** The plan model currently in use: the chosen one until it is rate-limited. */
+  const active = (): string => planModels.find((m) => !limited.has(m)) ?? model
   const researchModel = opts.researchModel ?? GROQ_RESEARCH_MODEL
   const doFetch: FetchLike = opts.fetchImpl ?? fetch
-  const wait: SleepLike = opts.sleepImpl ?? sleep
+  const sleepFor: SleepLike = opts.sleepImpl ?? sleep
+  let onWait: ((ms: number) => void) | null = null
+  const wait: SleepLike = (ms) => {
+    onWait?.(ms)
+    return sleepFor(ms)
+  }
 
   /**
    * gpt-oss models reason before answering and the reasoning spends the same output
@@ -132,7 +149,7 @@ export function groqClient(opts: {
 
   async function chat(
     request: Record<string, unknown>,
-    opts2: { allowTruncated?: boolean } = {}
+    opts2: { allowTruncated?: boolean; failFast?: boolean } = {}
   ): Promise<string> {
     let body = { ...reasoningParams(String(request.model)), ...request }
     let shrunk = false
@@ -156,7 +173,8 @@ export function groqClient(opts: {
         // Groq says how long to wait; honour it up to a point, then give up cleanly.
         const retryAfter = Number(res.headers.get('retry-after'))
         const ms = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 1500
-        if (attempt < MAX_RATE_LIMIT_RETRIES && ms <= MAX_WAIT_MS) {
+        // With another model to fall back on, moving on beats waiting out this one.
+        if (!(res.status === 429 && opts2.failFast) && attempt < MAX_RATE_LIMIT_RETRIES && ms <= MAX_WAIT_MS) {
           await wait(ms)
           continue
         }
@@ -225,6 +243,36 @@ export function groqClient(opts: {
    * zod parse afterwards is what actually guarantees the shape either way.
    */
   async function structured<T>(prompt: Prompt, schema: z.ZodType<T>, name: string, maxTokens: number): Promise<T> {
+    const tried: string[] = []
+    for (;;) {
+      const current = active()
+      const last = planModels.every((m) => m === current || limited.has(m))
+      tried.push(current)
+      try {
+        return await structuredOn(current, prompt, schema, name, maxTokens, !last)
+      } catch (err) {
+        if (!(err instanceof AiError) || err.kind !== 'rate_limit' || last) {
+          if (err instanceof AiError && err.kind === 'rate_limit' && tried.length > 1) {
+            throw new AiError(
+              `Groq is rate-limiting every model tried (${tried.join(', ')}). Free-tier limits reset each minute — wait a minute and try again.`,
+              'rate_limit'
+            )
+          }
+          throw err
+        }
+        limited.add(current)
+      }
+    }
+  }
+
+  async function structuredOn<T>(
+    model: string,
+    prompt: Prompt,
+    schema: z.ZodType<T>,
+    name: string,
+    maxTokens: number,
+    failFast: boolean
+  ): Promise<T> {
     const jsonSchema = toStrictSchema(schema)
     const messages: ChatMessage[] = [
       { role: 'system', content: prompt.system },
@@ -239,7 +287,7 @@ export function groqClient(opts: {
         max_tokens: maxTokens,
         temperature: 0.4,
         response_format: { type: 'json_schema', json_schema: { name, strict: true, schema: jsonSchema } }
-      })
+      }, { failFast })
     } catch (err) {
       const status = (err as { status?: number }).status
       if (!(err instanceof AiError) || err.kind !== 'other' || status !== 400) throw err
@@ -255,7 +303,7 @@ export function groqClient(opts: {
         max_tokens: maxTokens,
         temperature: 0.4,
         response_format: { type: 'json_object' }
-      })
+      }, { failFast })
     }
 
     const parsed = schema.safeParse(extractJson(text))
@@ -266,6 +314,10 @@ export function groqClient(opts: {
   }
 
   return {
+    setWaitListener(listener) {
+      onWait = listener
+    },
+
     /**
      * Research tries the compound system first (it has web search), then its lighter
      * sibling, then the plan model with no search at all. Groq's compound tier refuses
@@ -274,6 +326,7 @@ export function groqClient(opts: {
      * memory still has to survive the Intervenor's fetch before the user sees it.
      */
     async research(prompt) {
+      const model = active()
       const candidates = [...new Set([researchModel, GROQ_RESEARCH_FALLBACK_MODEL, model])]
       const failures: string[] = []
       let lastKind: AiError['kind'] = 'other'
@@ -281,9 +334,8 @@ export function groqClient(opts: {
       for (const candidate of candidates) {
         const searchless = candidate === model
         const system = searchless
-          ? `${prompt.system}\n\nYou do not have web access for this request. Draw on what you know; ` +
-            'only give a URL when you are confident the page exists at exactly that address, otherwise ' +
-            'describe what to search for instead.'
+          ? `${prompt.system}\n\nYou do not have web access for this request. Draw on what you know, ` +
+            'and do not give any URLs: name each resource precisely enough that it can be searched for.'
           : prompt.system
         try {
           // Findings are free text, so a summary cut short by the output cap is still
@@ -301,7 +353,7 @@ export function groqClient(opts: {
           )
           if (!text.trim()) throw new AiError('The research step returned no findings.', 'malformed')
           return searchless
-            ? `(Researched without web search — links come from the model's memory and will be verified.)\n\n${text}`
+            ? `(Researched without web search — no links available.)\n\n${text}`
             : text
         } catch (err) {
           const e = err instanceof AiError ? err : new AiError(String(err), 'other')

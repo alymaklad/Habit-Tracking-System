@@ -12,7 +12,7 @@ import {
   type OccurrenceFacts
 } from '@main/domain/scoring'
 import { computeStreaks } from '@main/domain/streaks'
-import { levelForXp, levelInfo, levelTitle } from '@main/domain/levels'
+import { levelForXp, levelInfo, levelTitle } from '@shared/levels'
 import { ladder, ladderStep, proposeAdjustment, targetForLevel } from '@main/domain/difficulty'
 import { ACHIEVEMENTS, earnedKeys, type AchievementStats } from '@main/domain/achievements'
 

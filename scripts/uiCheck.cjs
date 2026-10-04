@@ -56,27 +56,35 @@ if (report.error) {
   process.exit(1)
 }
 const EXPECTED_NAV = [
-  'Dashboard',
-  'To-do',
+  'Today',
+  'Journey',
+  'Mountains',
+  'Me',
   'Habits',
+  'To-do',
   'Calendar',
   'Progress',
-  'Performance',
-  'Leaderboard',
+  'Weekly Review',
   'Achievements',
-  'Challenges',
+  'Let Go',
+  'Journal',
   'Settings'
 ]
 
 const EXPECTED_ROUTES = [
-  'To-do',
+  'Journey',
+  'Mountains',
+  'Me',
   'Habits',
+  'To-do',
   'Calendar',
   'Progress',
-  'Performance',
+  'Weekly Review',
   'Achievements',
+  'Let Go',
+  'Journal',
   'Settings',
-  'Dashboard'
+  'Today'
 ]
 
 const checks = [

@@ -231,3 +231,25 @@ describe('removing a goal', () => {
     expect(h.todos.listForDate('2026-09-05')).toHaveLength(1)
   })
 })
+
+describe('obstacles and the saved draft', () => {
+  it('keeps obstacles tied to the mountain’s own waypoints', async () => {
+    const h = harness()
+    const g = h.goalsApi.commit(input, normalisePlan(samplePlan()), NOW)
+    const first = h.goalsApi.get(g.id, NOW)!.milestones[0]!
+    h.goalsApi.updatePlan(g.id, { obstacles: [{ id: 'o1', title: '  Fear of starting ', note: '', nearMilestoneId: first.id, passed: false }] })
+    expect(h.goalsApi.get(g.id, NOW)!.obstacles).toEqual([{ id: 'o1', title: 'Fear of starting', note: null, nearMilestoneId: first.id, passed: false }])
+    expect(() => h.goalsApi.updatePlan(g.id, { obstacles: [{ id: 'o2', title: 'x', note: null, nearMilestoneId: 99999, passed: false }] })).toThrow(/no longer on this mountain/)
+    expect(() => h.goalsApi.updatePlan(g.id, { obstacles: [{ id: 'o3', title: '  ', note: null, nearMilestoneId: null, passed: false }] })).toThrow(/Name what stands/)
+  })
+
+  it('saves one wizard draft and clears it', () => {
+    const h = harness()
+    expect(h.goalsApi.draft()).toBeNull()
+    h.goalsApi.saveDraft({ title: 'Learn Spanish', story: '', targetDate: null, weeklyMinutes: 240, anchors: [], plan: null, warnings: [], iterations: 0, savedAt: '' })
+    expect(h.goalsApi.draft()).toMatchObject({ title: 'Learn Spanish', weeklyMinutes: 240 })
+    expect(h.goalsApi.draft()!.savedAt).not.toBe('')
+    h.goalsApi.saveDraft(null)
+    expect(h.goalsApi.draft()).toBeNull()
+  })
+})
