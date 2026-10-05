@@ -93,7 +93,7 @@ export default function HabitEditor({
   const invalid = !draft.name.trim() || (weekly && days.length === 0) || draft.targetMinutes <= 0
 
   return (
-    <Modal onClose={onClose} label={habit ? `Edit ${habit.name}` : 'Plant a new habit'} width={720}>
+    <Modal onClose={onClose} label={habit ? `Edit ${habit.name}` : 'Add a habit'} width={720}>
       <form
         className="flex flex-col"
         onSubmit={(e) => {
@@ -103,8 +103,8 @@ export default function HabitEditor({
       >
         <div className="flex items-start justify-between gap-4 px-8 pt-7 pb-5 border-b border-[var(--rule)]">
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-[var(--ochre-deep)]">{habit ? 'Tend this rhythm' : 'Plant a new habit rhythm'}</span>
-            <h2 className="t-h1 !text-[28px] m-0">{habit ? habit.name || 'Untitled rhythm' : 'A small deliberate step'}</h2>
+            <span className="t-stamp text-[var(--ochre-deep)]">{habit ? 'Edit habit' : 'New habit'}</span>
+            <h2 className="t-h1 !text-[28px] m-0">{habit ? habit.name || 'Untitled habit' : 'A small step you repeat'}</h2>
           </div>
           <IconBtn title="Close" onClick={onClose}>
             <X size={17} />
@@ -120,7 +120,7 @@ export default function HabitEditor({
 
           <div className="grid gap-6 grid-cols-[1fr_auto]">
             <div className="flex flex-col gap-2">
-              <span className="kh-field-label">Rhythm</span>
+              <span className="kh-field-label">How often</span>
               <div className="kh-segmented self-start">
                 <button type="button" className={weekly ? 'is-on' : ''} onClick={() => setDraft({ ...draft, recurrence: { kind: 'weekly', days: days.length ? days : [1, 2, 3, 4, 5] } })}>
                   Chosen weekdays
@@ -174,9 +174,9 @@ export default function HabitEditor({
             </Field>
           </div>
 
-          <Field label="Moves you toward" hint="Tie the habit to a mountain, or keep it as personal cultivation">
+          <Field label="Moves you toward" hint="Link the habit to a mountain, or keep it on its own">
             <select className="kh-select" value={draft.goalId ?? ''} onChange={(e) => setDraft({ ...draft, goalId: e.target.value ? Number(e.target.value) : null })}>
-              <option value="">Unanchored — personal cultivation</option>
+              <option value="">Not part of a mountain</option>
               {goals
                 .filter((g) => g.status === 'active' || g.id === draft.goalId)
                 .map((g) => (
@@ -188,7 +188,7 @@ export default function HabitEditor({
           </Field>
 
           <div className="flex flex-col gap-2">
-            <span className="kh-field-label">Default steps within this rhythm</span>
+            <span className="kh-field-label">Steps in this habit</span>
             <span className="kh-field-hint">Added to each new day of the habit. Finishing every step completes the habit.</span>
             {steps.map((s, i) => (
               <div key={`${s}-${i}`} className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export default function HabitEditor({
           {habit ? (
             <Btn kind="soft" disabled={busy} onClick={() => void setActive(!habit.active)}>
               {habit.active ? <Pause size={14} /> : <Play size={14} />}
-              {habit.active ? 'Pause this rhythm' : 'Resume this rhythm'}
+              {habit.active ? 'Pause this habit' : 'Resume this habit'}
             </Btn>
           ) : (
             <span />
@@ -237,7 +237,7 @@ export default function HabitEditor({
               Cancel
             </Btn>
             <Btn kind="laurel" type="submit" disabled={busy || invalid}>
-              {habit ? 'Save rhythm' : 'Plant this habit'}
+              {habit ? 'Save habit' : 'Add habit'}
             </Btn>
           </div>
         </div>

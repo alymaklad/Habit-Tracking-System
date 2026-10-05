@@ -13,7 +13,7 @@ type Phase = 0 | 1 | 2 | 3 | 4
 function CairnScene({ phase, title }: { phase: Phase; title: string }) {
   const onCairn = phase >= 2
   return (
-    <svg viewBox="0 0 360 300" className="w-full h-auto" role="img" aria-label={onCairn ? `${title} set down on the cairn; the backpack is lighter` : `A backpack carrying ${title}, beside a cairn`}>
+    <svg viewBox="0 0 360 300" className="w-full h-auto" role="img" aria-label={onCairn ? `${title} left behind; the backpack is lighter` : `A backpack carrying ${title}`}>
       <defs>
         <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="var(--ochre-wash)" />
@@ -89,7 +89,7 @@ export default function Ceremony({ id }: { id: number }) {
   }, [phase, reduce])
 
   if (loadError) return <Page><LoadError message={loadError} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Walking up to the cairn…" /></Page>
+  if (!data) return <Page><Loading label="Loading…" /></Page>
   const item = data.item
   if (!item) {
     return (
@@ -130,9 +130,6 @@ export default function Ceremony({ id }: { id: number }) {
       </button>
 
       <header className="flex flex-col gap-4 mb-9 max-w-[900px]">
-        <Stamp tone="ochre" className="self-start">
-          Expedition milestone · pack-lightening ceremony
-        </Stamp>
         <h1 className="t-hero !text-[52px] !leading-[60px] m-0 [text-wrap:balance]">{done ? 'The climb became lighter.' : 'You have been carrying this for a while.'}</h1>
         <p className="m-0 text-[17px] flex flex-wrap gap-x-2">
           <span className="font-semibold">Weight cast off:</span>
@@ -148,7 +145,7 @@ export default function Ceremony({ id }: { id: number }) {
         <div className="flex flex-col gap-5">
           <section className="kh-card kh-tape p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <span className="t-stamp !text-[10.5px] text-ink-3">Waypoint cairn</span>
+              <span className="t-stamp !text-[10.5px] text-ink-3">Leaving it behind</span>
               <span className="t-caption">{item.goalTitle ?? 'The trail'}</span>
             </div>
             <div className="rounded-lg overflow-hidden">
@@ -208,15 +205,15 @@ export default function Ceremony({ id }: { id: number }) {
           </section>
 
           <section className="kh-card p-6 flex flex-col gap-3">
-            <span className="t-stamp !text-[10.5px] text-ink-3">Vow of the unburdened stride · optional</span>
+            <span className="t-stamp !text-[10.5px] text-ink-3">A promise to yourself · optional</span>
             {item.status === 'left_behind' ? (
-              <p className="m-0 font-serif italic text-[20px] leading-[32px] text-ink-2 [text-wrap:pretty]">{item.vow ? `“${item.vow}”` : 'Set down without words — that is enough.'}</p>
+              <p className="m-0 font-serif italic text-[20px] leading-[32px] text-ink-2 [text-wrap:pretty]">{item.vow ? `“${item.vow}”` : 'No words needed. That is enough.'}</p>
             ) : (
               <textarea
                 className="kh-textarea !font-serif !italic !text-[18px]"
                 rows={3}
                 value={vow}
-                placeholder={`I acknowledge that ${item.title.toLowerCase()} was once how I sought rest. I now choose ${item.replacement?.toLowerCase() ?? 'something kinder'}…`}
+                placeholder={`I used ${item.title.toLowerCase()} to rest. Now I choose ${item.replacement?.toLowerCase() ?? 'something kinder'}…`}
                 onChange={(e) => setVow(e.target.value)}
               />
             )}

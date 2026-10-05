@@ -24,7 +24,7 @@ import type { AiStatus, GoalDraftInput, SavedGoalDraft, GoalPlan, GoalPlanProgre
 import MindMap from '../components/MindMap'
 import { useTick } from '../hooks/useData'
 import { addDays, duration } from '../lib/format'
-import { dayMonth, daysBetween, monthYear, moveMilestone, plural, roman, time12, today } from '../lib/khatwa'
+import { dayMonth, daysBetween, monthYear, moveMilestone, plural, time12, today } from '../lib/khatwa'
 import { TrailMap } from '../khatwa/charts'
 import { GripVertical, Save } from 'lucide-react'
 import { useShell } from '../khatwa/nav'
@@ -44,7 +44,7 @@ const DISCIPLINE_IDEAS = ['Daily practice', 'Reading & study', 'Hands-on project
 
 function composeDescription(text: string, anchors: string[]): string | null {
   const body = text.trim()
-  const extra = anchors.length ? `Supporting disciplines to anchor: ${anchors.join(', ')}.` : ''
+  const extra = anchors.length ? `Kinds of practice to include: ${anchors.join(', ')}.` : ''
   const all = [body, extra].filter(Boolean).join('\n\n')
   return all || null
 }
@@ -111,15 +111,15 @@ function Describe({
         <div className="flex flex-col gap-4 max-w-[760px]">
           <Eyebrow>
             <span className="w-6 h-6 rounded-full bg-[var(--ochre-wash)] grid place-items-center text-[11px]">{String(active.length + 1).padStart(2, '0')}</span>
-            Expedition inception <span className="is-quiet">/ Carta no. {String(active.length + 1).padStart(2, '0')} · Charting a new peak</span>
+            New mountain <span className="is-quiet">· step 1 of 3</span>
           </Eyebrow>
           <h1 className="t-hero m-0">Choose Your Mountain</h1>
           <p className="t-italic !text-[18px] !leading-[29px] m-0 [text-wrap:pretty]">
-            “A major transformation requires a dedicated peak. The mountain is not a casual ambition; it is the deliberate distance between who you are today and the life you yearn to inhabit.”
+            A mountain is one big goal you want to reach. Describe it, and the planner will turn it into milestones and weekly habits.
           </p>
         </div>
         <Stamp className="!py-2 !px-3.5">
-          <Compass size={14} /> Solitary ascent · vellum record
+          <Compass size={14} /> Plan a goal
         </Stamp>
       </header>
 
@@ -147,7 +147,7 @@ function Describe({
             </Alert>
           ) : (
             <Alert tone="ochre">
-              The cartographer needs {provider ? `${/^[aeiou]/i.test(provider.label) ? 'an' : 'a'} ${provider.label}` : 'an'} API key before it can chart a trail.{' '}
+              The planner needs {provider ? `${/^[aeiou]/i.test(provider.label) ? 'an' : 'a'} ${provider.label}` : 'an'} API key before it can make a plan.{' '}
               <button className="underline font-semibold" onClick={() => navigate({ name: 'settings' })}>
                 Add one in Settings → AI planner
               </button>
@@ -172,9 +172,9 @@ function Describe({
           <div className="flex items-baseline justify-between gap-4">
             <h2 className="m-0 flex items-baseline gap-3">
               <span className="t-stamp text-[var(--ochre-deep)]">Phase II</span>
-              <span className="t-h2">Tell Khatwa a little more about this horizon</span>
+              <span className="t-h2">Tell Khatwa a little more about this goal</span>
             </h2>
-            <span className="t-stamp text-ink-4">Marginalia &amp; reason</span>
+            <span className="t-stamp text-ink-4">Your reasons</span>
           </div>
           <textarea
             className="kh-textarea"
@@ -197,18 +197,18 @@ function Describe({
             <div className="kh-sheet p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className="t-stamp text-ink-3 flex items-center gap-2">
-                  <CalendarDays size={14} /> Summit horizon
+                  <CalendarDays size={14} /> Target date
                 </span>
                 {horizonDays !== null ? (
                   <Stamp tone="laurel" className="!text-[10px]">
-                    {horizonDays < 120 ? 'Sprint pace' : horizonDays < 400 ? 'Steady pace' : 'Mastery pace'}
+                    {horizonDays < 120 ? 'Fast pace' : horizonDays < 400 ? 'Steady pace' : 'Long-term pace'}
                   </Stamp>
                 ) : null}
               </div>
               <div className="flex flex-col gap-1">
-                <span className="font-serif text-[26px] leading-8">{target ? monthYear(target) : 'An open horizon'}</span>
+                <span className="font-serif text-[26px] leading-8">{target ? monthYear(target) : 'No end date'}</span>
                 <span className="t-italic !text-[13.5px]">
-                  {horizonDays !== null ? `About ${Math.max(1, Math.round(horizonDays / 30))} months of ascent` : 'No fixed date — the plan paces itself'}
+                  {horizonDays !== null ? `About ${Math.max(1, Math.round(horizonDays / 30))} months` : 'No fixed date — the plan paces itself'}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -242,14 +242,14 @@ function Describe({
               </div>
               <input className="kh-range" type="range" min={60} max={1200} step={30} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} aria-label="Hours per week" />
               <div className="flex justify-between t-stamp !text-[10px] text-ink-4">
-                <span>1h light trail</span>
-                <span>10h steady ascent</span>
-                <span>20h ridge sprint</span>
+                <span>1h light</span>
+                <span>10h steady</span>
+                <span>20h intense</span>
               </div>
               <div className="kh-docket p-3.5 flex items-start gap-3">
                 <Hourglass size={17} className="text-[var(--ochre-deep)] mt-0.5 shrink-0" />
                 <span className="text-[13.5px] leading-5 text-ink-2">
-                  <b className="font-semibold">Deliberate focus pace:</b> about {duration(perDay)} a day, or a few longer blocks — the cartographer arranges it around the habits you already keep.
+                  <b className="font-semibold">Your pace:</b> about {duration(perDay)} a day, or a few longer sessions. The planner fits them around the habits you already have.
                 </span>
               </div>
             </div>
@@ -259,9 +259,9 @@ function Describe({
         <div className="kh-sheet p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-4">
             <span className="t-stamp text-ink-3 flex items-center gap-2">
-              <Hash size={14} /> Supporting disciplines &amp; field anchors
+              <Hash size={14} /> What should the plan include?
             </span>
-            <span className="t-caption">Tell the cartographer which crafts to build around</span>
+            <span className="t-caption">Pick the kinds of practice you want</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {anchors.map((a) => (
@@ -298,11 +298,11 @@ function Describe({
           </span>
           <div className="flex flex-col gap-2 min-w-0">
             <span className="flex items-center gap-3">
-              <span className="t-stamp text-[var(--ochre-deep)]">The law of limited ridges</span>
-              <span className="t-stamp !text-[10.5px] text-ink-4">Folio advisory</span>
+              <span className="t-stamp text-[var(--ochre-deep)]">Keep it to a few</span>
+              
             </span>
             <span className="text-[14.5px] text-ink-2 [text-wrap:pretty]">
-              A meaningful life has room for three or four true summits at once. This commitment would become your {active.length + 1}
+              Most people can work on three or four big goals at once. This would be your {active.length + 1}
               {['st', 'nd', 'rd'][active.length] ?? 'th'} active mountain{active.length ? ' alongside:' : '.'}
             </span>
             {active.length ? (
@@ -330,7 +330,7 @@ function Describe({
           <div className="flex items-center gap-5">
             <span className="t-italic !text-[13px]">Ready to record into your journal?</span>
             <Btn kind="ochre" size="lg" disabled={!title.trim() || ai?.ready === false} onClick={onBegin}>
-              Begin the climb <ArrowRight size={17} />
+              Make my plan <ArrowRight size={17} />
             </Btn>
           </div>
         </div>
@@ -343,9 +343,9 @@ function Describe({
 
 const STAGES: { key: string; title: string; body: string }[] = [
   { key: 'researching', title: 'Understanding your destination', body: 'Researching the peak: what the craft asks of you, the curricula people follow, and resources worth trusting.' },
-  { key: 'drafting', title: 'Designing your milestones & ridge camps', body: 'Drafting waypoints and weekly rhythms that fit around the habits you already keep, inside your weekly allocation.' },
-  { key: 'reviewing', title: 'The Intervenor’s review', body: 'An independent reviewer checks the draft for schedule collisions, an honest pace and links that actually resolve.' },
-  { key: 'yours', title: 'Reviewing the route & first step', body: 'The finished map comes back to you to edit before anything is written into your folio.' }
+  { key: 'drafting', title: 'Drafting milestones and habits', body: 'Choosing milestones and weekly habits that fit around the habits you already have, within your weekly time.' },
+  { key: 'reviewing', title: 'Checking the plan', body: 'A separate reviewer checks the draft for clashes with your schedule, a realistic pace and links that work.' },
+  { key: 'yours', title: 'Your turn to review', body: 'You can change anything in the plan before it is saved.' }
 ]
 
 function Planning({ progress, input, ai, startedAt }: { progress: GoalPlanProgress | null; input: GoalDraftInput; ai: AiStatus | null; startedAt: number }) {
@@ -362,11 +362,11 @@ function Planning({ progress, input, ai, startedAt }: { progress: GoalPlanProgre
       <header className="flex flex-wrap items-end justify-between gap-6 mb-9">
         <div className="flex flex-col gap-3">
           <Eyebrow>
-            <Dot /> Expedition inception <span className="is-quiet">/ Architectural synthesis</span>
+            <Dot /> New mountain <span className="is-quiet">· step 2 of 3</span>
           </Eyebrow>
           <div className="flex items-end gap-6 flex-wrap">
             <h1 className="t-hero !text-[56px] !leading-[60px] m-0 text-[var(--laurel-deep)]">Building Your Trail</h1>
-            <span className="t-italic pb-2">— cartographic drafting in progress</span>
+            <span className="t-italic pb-2">— this takes about a minute</span>
           </div>
         </div>
         <div className="kh-docket px-5 py-4 flex items-center gap-4 max-w-[420px]">
@@ -385,7 +385,7 @@ function Planning({ progress, input, ai, startedAt }: { progress: GoalPlanProgre
         <section className="kh-card p-8 flex flex-col gap-7">
           <div className="flex items-center justify-between gap-4">
             <span className="t-stamp text-[var(--laurel-deep)] flex items-center gap-2.5">
-              <NotebookPen size={17} /> Live cartography progression
+              <NotebookPen size={17} /> Progress
             </span>
             <span className="font-serif text-[12.5px] tracking-[0.1em] text-ink-4 t-num">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')} elapsed</span>
           </div>
@@ -403,7 +403,7 @@ function Planning({ progress, input, ai, startedAt }: { progress: GoalPlanProgre
                 <div className="flex flex-col gap-1.5 min-w-0">
                   <span className="flex items-center gap-3 flex-wrap">
                     <span className="text-[19px] font-semibold leading-7">{s.title}</span>
-                    {state === 'done' ? <Stamp tone="laurel" className="!text-[10.5px]">Complete</Stamp> : state === 'active' ? <span className="t-stamp !text-[11px] text-[var(--ochre-deep)]">Active synthesis</span> : null}
+                    {state === 'done' ? <Stamp tone="laurel" className="!text-[10.5px]">Complete</Stamp> : state === 'active' ? <span className="t-stamp !text-[11px] text-[var(--ochre-deep)]">Working on it</span> : null}
                   </span>
                   <span className="text-[14.5px] leading-[23px] text-ink-3 [text-wrap:pretty]">{s.body}</span>
                   {state === 'active' && waitLeft > 0 ? (
@@ -426,16 +426,16 @@ function Planning({ progress, input, ai, startedAt }: { progress: GoalPlanProgre
           })}
           <div className="flex items-center gap-3 pt-2">
             <span className="kh-btn is-laurel pointer-events-none">
-              <span className="kh-dot kh-breathe" /> Synthesizing trail architecture…
+              <span className="kh-dot kh-breathe" /> Making your plan…
             </span>
-            <span className="t-caption max-w-[300px]">The cartographer can’t be interrupted mid-draft — you can change everything on the next page.</span>
+            <span className="t-caption max-w-[300px]">You can change everything on the next page.</span>
           </div>
         </section>
 
         <aside className="flex flex-col gap-5">
           <div className="kh-sheet p-5 flex flex-col gap-4">
             <span className="t-stamp text-ink-3 flex items-center gap-2">
-              <Compass size={15} /> Topographic schematic · <span className="text-[var(--ochre-deep)]">drafting</span>
+              <Compass size={15} /> Your trail · <span className="text-[var(--ochre-deep)]">drafting</span>
             </span>
             <svg viewBox="0 0 320 200" className="w-full rounded-lg bg-[var(--card)]" aria-hidden="true">
               {[40, 80, 120, 160].map((y) => (
@@ -465,13 +465,13 @@ function Planning({ progress, input, ai, startedAt }: { progress: GoalPlanProgre
 
           <div className="kh-sheet p-5 flex flex-col gap-3">
             <span className="t-stamp text-[var(--ochre-deep)] flex items-center gap-2">
-              <NotebookPen size={15} /> Planner marginalia memo
+              <NotebookPen size={15} /> How the plan is checked
             </span>
             <p className="font-serif text-[17px] leading-[27px] m-0 text-ink-2 [text-wrap:pretty]">
-              “Every draft is checked twice: once by plain arithmetic against your existing schedule, and once by a reviewer that sees only the finished map — never the drafter’s reasoning.”
+              Every draft is checked twice: first against your current schedule, then by a separate reviewer who only sees the finished plan.
             </p>
             <span className="t-caption">
-              Charting with {provider?.label ?? 'the configured planner'}
+              Planning with {provider?.label ?? 'the configured AI'}
               {provider ? ` · ${provider.model}` : ''}
             </span>
           </div>
@@ -480,19 +480,19 @@ function Planning({ progress, input, ai, startedAt }: { progress: GoalPlanProgre
 
       <div className="grid gap-4 mt-7 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
         <div className="kh-docket p-5 flex flex-col gap-1">
-          <span className="t-stamp text-ink-4">Ascent horizon</span>
+          <span className="t-stamp text-ink-4">Time to goal</span>
           <span className="text-[24px] font-semibold">{months ? `${months} months` : 'Open'}</span>
-          <span className="t-italic !text-[13px]">{input.targetDate ? `${dayMonth(today())} → ${monthYear(input.targetDate)}` : 'No fixed summit date'}</span>
+          <span className="t-italic !text-[13px]">{input.targetDate ? `${dayMonth(today())} → ${monthYear(input.targetDate)}` : 'No end date'}</span>
         </div>
         <div className="kh-docket p-5 flex flex-col gap-1">
-          <span className="t-stamp text-ink-4">Rhythm buffer</span>
+          <span className="t-stamp text-ink-4">Weekly time</span>
           <span className="text-[24px] font-semibold text-[var(--ochre-deep)]">{duration(input.weeklyMinutesBudget ?? 0)}/wk</span>
-          <span className="t-italic !text-[13px]">The plan must stay inside this</span>
+          <span className="t-italic !text-[13px]">The plan stays within this</span>
         </div>
         <div className="kh-docket p-5 flex flex-col gap-1">
           <span className="t-stamp text-ink-4">Review passes</span>
           <span className="text-[24px] font-semibold text-slate">{progress ? `${progress.iteration} of ${progress.maxIterations}` : '—'}</span>
-          <span className="t-italic !text-[13px]">Bounded, so it never loops forever</span>
+          <span className="t-italic !text-[13px]">At most three drafts</span>
         </div>
       </div>
     </>
@@ -528,7 +528,7 @@ function Ready({
       <header className="flex flex-wrap items-end justify-between gap-6 mb-8">
         <div className="flex flex-col gap-3 max-w-[760px]">
           <Eyebrow>
-            <Dot /> Expedition inception / cartography complete
+            <Dot /> New mountain · your plan is ready
           </Eyebrow>
           <h1 className="t-hero m-0">Your Mountain is Ready.</h1>
           <p className="font-serif text-[19px] leading-[29px] text-ink-2 m-0 [text-wrap:pretty]">{plan.summary}</p>
@@ -536,7 +536,7 @@ function Ready({
         <div className="kh-sheet px-5 py-4 flex items-center gap-4">
           <span className="flex flex-col">
             <span className="t-stamp !text-[10.5px] text-ink-4">Projected summit</span>
-            <span className="text-[19px] font-semibold">{input.targetDate ? monthYear(input.targetDate) : 'Open horizon'}</span>
+            <span className="text-[19px] font-semibold">{input.targetDate ? monthYear(input.targetDate) : 'No end date'}</span>
           </span>
           <span className="w-11 h-11 rounded-lg grid place-items-center bg-[var(--ochre-tint)] text-[var(--ochre-deep)]">
             <Mountain size={20} />
@@ -571,14 +571,14 @@ function Ready({
 
       <section className="kh-card p-6 mb-7">
         <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <Stamp className="!text-[11px]">Quadrant {roman(Math.max(1, milestones.length))} — {milestones.length} waypoints</Stamp>
+          <Stamp className="!text-[11px]">{plural(milestones.length, 'milestone')}</Stamp>
           <span className="t-italic !text-[13px]">{warnings.length > 0 ? `Checked over ${plural(iterations, 'draft')}` : iterations === 1 ? 'Accepted on the first draft' : `Accepted after ${iterations} drafts`}</span>
         </div>
         {milestones.length > 0 ? (
           <TrailMap
             waypoints={milestones.map((m, i) => ({ key: i, title: m.title, caption: dayMonth(m.dueDate), state: i === 0 ? 'current' : 'upcoming' }))}
             summit={input.title}
-            summitCaption={input.targetDate ? `Target horizon: ${monthYear(input.targetDate)}` : undefined}
+            summitCaption={input.targetDate ? `Target: ${monthYear(input.targetDate)}` : undefined}
             height={480}
             compact={milestones.length > 6}
           />
@@ -587,10 +587,10 @@ function Ready({
         )}
         <div className="flex flex-wrap gap-6 mt-4 t-stamp !text-[10.5px] text-ink-4">
           <span className="flex items-center gap-2">
-            <span className="w-5 border-t-2 border-dashed border-[var(--ochre)]" /> Chartered trail
+            <span className="w-5 border-t-2 border-dashed border-[var(--ochre)]" /> Planned trail
           </span>
           <span className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--laurel)]" /> Waypoints
+            <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--laurel)]" /> Milestones
           </span>
           <span className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[var(--ochre-deep)]" /> You begin here
@@ -603,9 +603,9 @@ function Ready({
           <div className="flex items-start justify-between gap-4">
             <span className="flex flex-col">
               <span className="t-stamp text-ink-4">Expedition specification</span>
-              <span className="t-h2">Ascent profile: {input.title}</span>
+              <span className="t-h2">Plan summary: {input.title}</span>
             </span>
-            <Stamp tone="ochre">{warnings.length > 0 ? 'Check before sealing' : 'Vetted route'}</Stamp>
+            <Stamp tone="ochre">{warnings.length > 0 ? 'Check before saving' : 'Checked plan'}</Stamp>
           </div>
           <div className="kh-docket grid grid-cols-2 min-[800px]:grid-cols-4 gap-5 p-5">
             <div className="flex flex-col">
@@ -614,7 +614,7 @@ function Ready({
               <span className="t-caption">{input.targetDate ? `Through ${monthYear(input.targetDate)}` : 'Paced by habit'}</span>
             </div>
             <div className="flex flex-col">
-              <span className="t-stamp !text-[10.5px] text-ink-4">Waypoints</span>
+              <span className="t-stamp !text-[10.5px] text-ink-4">Milestones</span>
               <span className="font-serif text-[21px]">{plural(milestones.length, 'milestone')}</span>
               <span className="t-caption">Progressive rigor</span>
             </div>
@@ -626,11 +626,11 @@ function Ready({
             <div className="flex flex-col">
               <span className="t-stamp !text-[10.5px] text-ink-4">Climb energy</span>
               <span className="font-serif text-[21px] text-[var(--ochre-deep)]">{weeks ? `~${Math.round((weekly * weeks) / 60)} hours` : '—'}</span>
-              <span className="t-caption">Deep deliberate work</span>
+              <span className="t-caption">Total practice time</span>
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <span className="t-stamp !text-[10.5px] text-ink-4">The {plan.sessions.length} disciplines anchoring this summit</span>
+            <span className="t-stamp !text-[10.5px] text-ink-4">The {plan.sessions.length} habits in this plan</span>
             <div className="flex flex-wrap gap-2">
               {plan.sessions.map((s, i) => (
                 <span key={i} className="kh-chip">
@@ -643,18 +643,18 @@ function Ready({
 
         <aside className="kh-card p-6 flex flex-col gap-5">
           <div className="flex items-center justify-between">
-            <span className="t-stamp text-[var(--ochre-deep)]">Expedition seal</span>
-            <span className="t-stamp !text-[10.5px] text-ink-4">Unsealed</span>
+            <span className="t-stamp text-[var(--ochre-deep)]">Save the plan</span>
+            <span className="t-stamp !text-[10.5px] text-ink-4">Not saved yet</span>
           </div>
-          <h2 className="t-h2 m-0">Commit to the ascent</h2>
+          <h2 className="t-h2 m-0">Ready to start?</h2>
           <p className="m-0 text-[14.5px] leading-[23px] text-ink-2 [text-wrap:pretty]">
-            Sealing this chart creates its weekly habits and dated waypoints in your folio. Nothing is written until you seal it on the next page.
+            Saving this plan adds its weekly habits and dated milestones to Khatwa. Nothing is saved until you confirm on the next page.
           </p>
           <Btn kind="ochre" size="lg" onClick={onReview}>
             Review your trail &amp; habits <ArrowRight size={16} />
           </Btn>
           <Btn kind="soft" onClick={onRechart}>
-            <SlidersHorizontal size={15} /> Re-chart route &amp; parameters
+            <SlidersHorizontal size={15} /> Change the goal details
           </Btn>
         </aside>
       </div>
@@ -738,10 +738,10 @@ function Review({
       <header className="flex flex-wrap items-end justify-between gap-6 mb-8">
         <div className="flex flex-col gap-3 max-w-[760px]">
           <Eyebrow>
-            <Stamp className="!text-[11px]">Expedition inception</Stamp> <span className="is-quiet">/</span> Trail verification &amp; first step
+            <Stamp className="!text-[11px]">New mountain</Stamp> <span className="is-quiet">· step 3 of 3</span>
           </Eyebrow>
           <h1 className="t-hero m-0">Review Your Trail</h1>
-          <p className="t-italic !text-[17px] m-0">Refine your waypoints, daily habits, and field pack before sealing this mountain into your active folio.</p>
+          <p className="t-italic !text-[17px] m-0">Adjust the milestones, habits and resources, then save the plan.</p>
         </div>
         <div className="kh-docket px-4 py-3 flex items-center gap-3">
           <Mountain size={18} />
@@ -757,20 +757,20 @@ function Review({
       <div className="grid gap-7 min-[1100px]:grid-cols-[minmax(320px,0.85fr)_minmax(0,1.15fr)]">
         <section className="kh-sheet p-6 flex flex-col gap-3 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <span className="t-stamp text-ink-2">Topographic itinerary</span>
+            <span className="t-stamp text-ink-2">Milestones</span>
             <span className="t-caption">{plural(plan.milestones.length, 'camp')}</span>
           </div>
           {plan.milestones.length ? (
             <div className="rounded-[10px] overflow-hidden mb-1">
               <TrailMap
-                waypoints={plan.milestones.map((m, i) => ({ key: i, title: m.title || 'Untitled camp', state: i === 0 ? 'current' : 'upcoming' }))}
+                waypoints={plan.milestones.map((m, i) => ({ key: i, title: m.title || 'Untitled milestone', state: i === 0 ? 'current' : 'upcoming' }))}
                 summit={input.title}
                 height={250}
                 compact
               />
             </div>
           ) : null}
-          <p className="m-0 t-caption !text-[12.5px]">Drag a camp by its handle to move it up or down the ridge. Dates keep climbing in order — a camp takes the date of the place it lands.</p>
+          <p className="m-0 t-caption !text-[12.5px]">Drag a milestone by its handle to reorder it. Dates stay in order: a moved milestone takes the date of its new place.</p>
           <span className="sr-only" aria-live="polite">
             {announce}
           </span>
@@ -828,7 +828,7 @@ function Review({
                 <input
                   className="kh-input !text-[14.5px] !font-semibold !py-1"
                   value={m.title}
-                  aria-label="Waypoint"
+                  aria-label="Milestone"
                   onChange={(e) => setPlan({ ...plan, milestones: plan.milestones.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })}
                 />
                 <div className="flex items-center gap-3">
@@ -842,7 +842,7 @@ function Review({
                   {m.description ? <span className="t-caption truncate">{m.description}</span> : null}
                 </div>
               </div>
-              <IconBtn title="Remove waypoint" onClick={() => setPlan({ ...plan, milestones: plan.milestones.filter((_, j) => j !== i) })}>
+              <IconBtn title="Remove milestone" onClick={() => setPlan({ ...plan, milestones: plan.milestones.filter((_, j) => j !== i) })}>
                 <X size={14} />
               </IconBtn>
             </li>
@@ -853,15 +853,15 @@ function Review({
             onClick={() =>
               setPlan({
                 ...plan,
-                milestones: [...plan.milestones, { title: 'New waypoint', dueDate: input.targetDate ?? addDays(today(), 14), description: null }]
+                milestones: [...plan.milestones, { title: 'New milestone', dueDate: input.targetDate ?? addDays(today(), 14), description: null }]
               })
             }
           >
-            <Plus size={15} /> Append waypoint along the ridge
+            <Plus size={15} /> Add a milestone
           </button>
           {plan.mindMap.length > 0 ? (
             <div className="mt-3 flex flex-col gap-2">
-              <span className="t-stamp !text-[10.5px] text-ink-4">The cartographer’s sketch</span>
+              <span className="t-stamp !text-[10.5px] text-ink-4">Topic map</span>
               <div className="rounded-lg overflow-hidden bg-[var(--card)]">
                 <MindMap nodes={plan.mindMap} height={220} />
               </div>
@@ -897,7 +897,7 @@ function Review({
           <section className="kh-sheet p-6 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <span className="t-stamp text-ink-2">
-                Rhythmic harness <span className="text-ink-4">· contributing habits</span>
+                Weekly habits <span className="text-ink-4">· in this plan</span>
               </span>
               <span className={`text-[13px] ${over ? 'text-[var(--error)]' : 'text-ink-3'}`}>
                 {duration(weekly)} / wk{input.weeklyMinutesBudget ? ` of ${duration(input.weeklyMinutesBudget)}` : ''}
@@ -960,13 +960,13 @@ function Review({
         <div className="flex items-center gap-3">
           {invalid ? <span className="t-caption text-[var(--error)]">Every habit needs a name, at least one day and a duration.</span> : null}
           <Btn kind="soft" disabled={busy} onClick={onRedraft}>
-            <Sparkles size={15} /> Re-draft with the cartographer
+            <Sparkles size={15} /> Make a new draft
           </Btn>
           <Btn kind="ruled" disabled={busy} onClick={onSaveDraft}>
             <Save size={15} /> Save draft
           </Btn>
           <Btn kind="laurel" size="lg" disabled={busy || invalid} onClick={onSeal}>
-            Take your first step <ArrowRight size={17} />
+            Save and start <ArrowRight size={17} />
           </Btn>
         </div>
       </footer>
@@ -1076,7 +1076,7 @@ export default function Expedition({ resume }: { resume?: boolean }) {
       const goal = await window.api.goals.commit(input, plan)
       // The draft has become a real mountain.
       await window.api.goals.saveDraft(null)
-      toast('success', 'The mountain is sealed into your folio.', `${plural(plan.sessions.length, 'habit')} and ${plural(plan.milestones.length, 'waypoint')} were created.`)
+      toast('success', 'Your mountain is saved.', `${plural(plan.sessions.length, 'habit')} and ${plural(plan.milestones.length, 'milestone')} were added.`)
       navigate({ name: 'mountain', id: goal.id })
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))

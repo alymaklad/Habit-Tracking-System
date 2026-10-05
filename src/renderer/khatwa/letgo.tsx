@@ -275,7 +275,7 @@ export function CheckInModal({ item, date, onClose }: { item: LetGoView; date: s
           ) : null}
 
           {resisted !== null ? (
-            <Field label="Field marginalia" hint="A short note, if you like">
+            <Field label="Note" hint="A short note, if you like">
               <textarea className="kh-textarea" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
             </Field>
           ) : null}

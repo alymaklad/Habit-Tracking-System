@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { GoalPlan } from '@shared/types'
+import { TRIGGER_CONTEXTS, type GoalPlan, type GoalSession, type LetGoPlan } from '@shared/types'
 
 /**
  * The shape the Actor must produce. Sent to the API as the structured-output format and
@@ -46,6 +46,18 @@ export const GoalPlanSchema = z.object({
 
 export type RawGoalPlan = z.infer<typeof GoalPlanSchema>
 
+/** A plan for letting a habit go: when it happens, what to do instead, and what helps. */
+export const LetGoPlanSchema = z.object({
+  summary: z.string(),
+  triggerContexts: z.array(z.enum(TRIGGER_CONTEXTS)),
+  triggerNotes: z.string().nullable(),
+  replacement: z.string(),
+  weight: z.enum(['light', 'medium', 'heavy']),
+  sessions: z.array(GoalSessionSchema),
+  supports: z.array(z.object({ title: z.string(), description: z.string().nullable() }))
+})
+export type RawLetGoPlan = z.infer<typeof LetGoPlanSchema>
+
 /** What the Intervenor's critique call must return. */
 export const CritiqueSchema = z.object({
   verdict: z.enum(['pass', 'fail']),
@@ -75,20 +87,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
 export function normalisePlan(raw: RawGoalPlan): GoalPlan {
   const problems: string[] = []
 
-  const sessions = raw.sessions.map((s, i) => {
-    const days = [...new Set(s.days.filter((d) => d >= 1 && d <= 7))].sort((a, b) => a - b)
-    if (days.length === 0) problems.push(`session ${i + 1} ("${s.name}") has no valid weekdays`)
-    if (!TIME.test(s.scheduledTime)) problems.push(`session ${i + 1} ("${s.name}") has time "${s.scheduledTime}", expected HH:MM`)
-    if (s.targetMinutes < 5) problems.push(`session ${i + 1} ("${s.name}") is under 5 minutes`)
-    if (!s.name.trim()) problems.push(`session ${i + 1} has no name`)
-    return {
-      name: s.name.trim(),
-      days,
-      scheduledTime: s.scheduledTime,
-      targetMinutes: Math.round(s.targetMinutes),
-      rationale: s.rationale?.trim() || null
-    }
-  })
+  const sessions = normaliseSessions(raw.sessions, problems)
 
   const milestones = raw.milestones.map((m, i) => {
     if (!DATE.test(m.dueDate)) problems.push(`milestone ${i + 1} ("${m.title}") has date "${m.dueDate}", expected YYYY-MM-DD`)
@@ -115,6 +114,46 @@ export function normalisePlan(raw: RawGoalPlan): GoalPlan {
   if (problems.length > 0) throw new PlanShapeError(problems)
 
   return { summary: raw.summary.trim(), sessions, milestones, mindMap: raw.mindMap, resources }
+}
+
+/** Weekdays deduplicated and in range, times well-formed, names present — or a problem noted. */
+function normaliseSessions(raw: RawGoalPlan['sessions'], problems: string[]): GoalSession[] {
+  return raw.map((s, i) => {
+    const days = [...new Set(s.days.filter((d) => d >= 1 && d <= 7))].sort((a, b) => a - b)
+    if (days.length === 0) problems.push(`session ${i + 1} ("${s.name}") has no valid weekdays`)
+    if (!TIME.test(s.scheduledTime)) problems.push(`session ${i + 1} ("${s.name}") has time "${s.scheduledTime}", expected HH:MM`)
+    if (s.targetMinutes < 5) problems.push(`session ${i + 1} ("${s.name}") is under 5 minutes`)
+    if (!s.name.trim()) problems.push(`session ${i + 1} has no name`)
+    return {
+      name: s.name.trim(),
+      days,
+      scheduledTime: s.scheduledTime,
+      targetMinutes: Math.round(s.targetMinutes),
+      rationale: s.rationale?.trim() || null
+    }
+  })
+}
+
+/** Tighten a let-go plan the same way: usable sessions, an "instead", at least one trigger. */
+export function normaliseLetGoPlan(raw: RawLetGoPlan): LetGoPlan {
+  const problems: string[] = []
+  const sessions = normaliseSessions(raw.sessions, problems)
+  if (sessions.length === 0) problems.push('the plan has no replacement habit')
+  if (!raw.replacement.trim()) problems.push('the plan has no "instead" for when the urge comes')
+  const triggerContexts = [...new Set(raw.triggerContexts)]
+  if (triggerContexts.length === 0) problems.push('the plan names no trigger')
+  if (problems.length > 0) throw new PlanShapeError(problems)
+  return {
+    summary: raw.summary.trim(),
+    triggerContexts,
+    triggerNotes: raw.triggerNotes?.trim() || null,
+    replacement: raw.replacement.trim(),
+    weight: raw.weight,
+    sessions,
+    supports: raw.supports
+      .map((x) => ({ title: x.title.trim(), description: x.description?.trim() || null }))
+      .filter((x) => x.title)
+  }
 }
 
 export class PlanShapeError extends Error {

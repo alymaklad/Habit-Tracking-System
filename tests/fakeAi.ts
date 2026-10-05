@@ -1,6 +1,6 @@
 import type { GoalDraftInput, GoalPlan } from '@shared/types'
 import { AiError, type AiClient, type FetchedPage, type PageToJudge, type Prompt } from '@main/ai/anthropicClient'
-import type { Critique, RawGoalPlan } from '@main/ai/goalPlanSchema'
+import type { Critique, RawGoalPlan, RawLetGoPlan } from '@main/ai/goalPlanSchema'
 import type { GoalPlanner, PlanningContext } from '@main/ai/types'
 
 /** A plan that passes every deterministic check against an empty calendar. */
@@ -28,6 +28,20 @@ export function samplePlan(overrides: Partial<RawGoalPlan> = {}): RawGoalPlan {
   }
 }
 
+/** A let-go plan that passes every deterministic check against an empty calendar. */
+export function sampleLetGoPlan(overrides: Partial<RawLetGoPlan> = {}): RawLetGoPlan {
+  return {
+    summary: 'Scrolling fills the gap before sleep. Put the phone out of reach and read instead.',
+    triggerContexts: ['before_sleep', 'boredom'],
+    triggerNotes: 'In bed, when too tired to read.',
+    replacement: 'Read two pages of a paper book',
+    weight: 'medium',
+    sessions: [{ name: 'Wind-down reading', days: [1, 2, 3, 4, 5, 6, 7], scheduledTime: '22:00', targetMinutes: 20, rationale: 'Fills the same slot' }],
+    supports: [{ title: 'Phone charges in the hallway', description: 'Out of the bedroom after 21:30.' }],
+    ...overrides
+  }
+}
+
 /**
  * Stands in for the Anthropic client. Scripted per call so a test can say exactly what
  * the Actor drafts on each attempt and what the critique returns — the same idea as
@@ -36,6 +50,7 @@ export function samplePlan(overrides: Partial<RawGoalPlan> = {}): RawGoalPlan {
 export class FakeAi implements AiClient {
   researchText = 'Findings: Language Transfer is a good free course. https://www.languagetransfer.org/'
   drafts: RawGoalPlan[] = [samplePlan()]
+  letGoDrafts: RawLetGoPlan[] = [sampleLetGoPlan()]
   critiques: Critique[] = [{ verdict: 'pass', feedback: [] }]
   pages = new Map<string, FetchedPage>()
   /** URLs the relevance judge should call off-topic. */
@@ -71,6 +86,12 @@ export class FakeAi implements AiClient {
     this.limit('finalize')
     const next = this.drafts.length > 1 ? this.drafts.shift()! : this.drafts[0]!
     return next
+  }
+
+  async finalizeLetGo(prompt: Prompt): Promise<RawLetGoPlan> {
+    this.calls.push({ kind: 'finalize', prompt })
+    this.limit('finalize')
+    return this.letGoDrafts.length > 1 ? this.letGoDrafts.shift()! : this.letGoDrafts[0]!
   }
 
   async critique(prompt: Prompt): Promise<Critique> {

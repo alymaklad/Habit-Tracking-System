@@ -227,7 +227,7 @@ export default function Settings({
   const { data, error, refetch } = useData(() => window.api.settings.get(), [])
   const [local, setLocal] = useState<AppSettings | null>(null)
   const [hasCreds, setHasCreds] = useState(true)
-  const { account, signOut } = useShell()
+  const { account, signOut, startTour } = useShell()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -256,7 +256,7 @@ export default function Settings({
   const connected = status && status.state !== 'disconnected'
 
   return (
-    <Screen title="Settings" subtitle="Folio · sync · notifications · scoring">
+    <Screen title="Settings">
       <div
         style={{
           display: 'grid',
@@ -267,7 +267,7 @@ export default function Settings({
       >
         {/* ------------------------------------------------ profile */}
         <Card style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-          <CardTitle>Your folio</CardTitle>
+          <CardTitle>Your profile</CardTitle>
           <Field label="Your name" hint="Used in greetings and on your Me page. Leave blank to go unnamed.">
             <input
               className="kh-input is-display"
@@ -282,6 +282,16 @@ export default function Settings({
               }}
             />
           </Field>
+        </Card>
+
+        <Card style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <CardTitle>New to Khatwa?</CardTitle>
+          <span style={{ fontSize: 12.5, color: 'var(--dim)' }}>A one-minute tour of the app and where things are.</span>
+          <div>
+            <Button kind="solid" onClick={startTour}>
+              REPLAY THE TOUR
+            </Button>
+          </div>
         </Card>
 
         {/* ------------------------------------------------ account */}

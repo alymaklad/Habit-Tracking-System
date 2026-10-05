@@ -6,7 +6,7 @@ import { addDays, duration, saturdayOf } from '../lib/format'
 import { dayMonth, roman, today } from '../lib/khatwa'
 import { useShell } from '../khatwa/nav'
 import { Page } from '../khatwa/Page'
-import { Alert, Bar, Btn, Dot, Eyebrow, LoadError, Loading, Stamp } from '../khatwa/ui'
+import { Alert, Bar, Btn, LoadError, Loading, Stamp } from '../khatwa/ui'
 
 type Data = {
   review: WeeklyReview | null
@@ -17,14 +17,6 @@ type Data = {
 }
 
 const TONES = ['var(--laurel-deep)', 'var(--ochre-deep)', 'var(--slate)', 'var(--laurel)', 'var(--ochre)']
-
-function season(date: string): string {
-  const m = Number(date.slice(5, 7))
-  if (m <= 2 || m === 12) return 'Winter'
-  if (m <= 5) return 'Spring'
-  if (m <= 8) return 'Summer'
-  return 'Autumn'
-}
 
 function Inquiry({ numeral, question, tag, tagTone, lines, empty, icon }: { numeral: string; question: string; tag: string; tagTone: string; lines: string[]; empty: string; icon: React.ReactNode }) {
   return (
@@ -47,7 +39,7 @@ function Inquiry({ numeral, question, tag, tagTone, lines, empty, icon }: { nume
           <p className="m-0 t-italic">{empty}</p>
         )}
         <span className="t-caption flex items-center gap-2 mt-1">
-          {icon} Read from the week’s record by the cadence engine
+          {icon} Based on what you recorded this week
         </span>
       </div>
     </article>
@@ -71,7 +63,7 @@ export default function WeeklyReviewRoute() {
   }, [anchor])
 
   if (loadError) return <Page><LoadError message={loadError} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Opening the week’s ledger…" /></Page>
+  if (!data) return <Page><Loading label="Loading your week…" /></Page>
 
   const { review, perf } = data
   const inProgress = anchor === saturdayOf(now)
@@ -103,13 +95,13 @@ export default function WeeklyReviewRoute() {
   const change = review?.improvementPercentage ?? null
   const went: string[] = []
   if (review && change !== null && change > 0) went.push(`Time on the trail rose ${Math.round(change)}%, from ${duration(review.previousMinutes)} to ${duration(review.totalMinutes)}.`)
-  if (review?.bestHabit && review.bestHabit.completionRate > 0) went.push(`${review.bestHabit.name} held a ${Math.round(review.bestHabit.completionRate)}% cadence — the steadiest rhythm of the week.`)
+  if (review?.bestHabit && review.bestHabit.completionRate > 0) went.push(`You did ${review.bestHabit.name} ${Math.round(review.bestHabit.completionRate)}% of the time, your most steady habit this week.`)
   if (perf.bestDay && perf.bestDay.points > 0) went.push(`${weekday(perf.bestDay.date)} was the strongest day: ${perf.bestDay.completed} of ${perf.bestDay.scheduled} steps, ${perf.bestDay.points} points.`)
   const hard: string[] = []
   if (review && change !== null && change < 0) hard.push(`Time on the trail fell ${Math.round(-change)}%, from ${duration(review.previousMinutes)} to ${duration(review.totalMinutes)}.`)
   if (review && review.totalMinutes === 0 && review.tasksScheduled > 0) hard.push(`No time was logged against ${review.tasksScheduled} scheduled steps.`)
   if (review?.weakestHabit && review.weakestHabit.completionRate < 70 && review.weakestHabit.name !== review.bestHabit?.name)
-    hard.push(`${review.weakestHabit.name} slipped to ${Math.round(review.weakestHabit.completionRate)}% — the rhythm most in need of care.`)
+    hard.push(`${review.weakestHabit.name} dropped to ${Math.round(review.weakestHabit.completionRate)}%, the habit that needs the most care.`)
   if (perf.worstDay && perf.worstDay.scheduled > 0 && perf.worstDay.date !== perf.bestDay?.date)
     hard.push(`${weekday(perf.worstDay.date)} was the heaviest day: ${perf.worstDay.completed} of ${perf.worstDay.scheduled} steps kept.`)
 
@@ -117,13 +109,10 @@ export default function WeeklyReviewRoute() {
     <Page>
       <header className="flex flex-wrap items-start justify-between gap-8 mb-9">
         <div className="flex flex-col gap-3 max-w-[720px]">
-          <Eyebrow>
-            <Dot /> Folio N° {weekNo} · {season(anchor)} ledger <span className="is-quiet">/ {inProgress ? 'Week in progress' : 'Archival entry'}</span>
-          </Eyebrow>
           <h1 className="t-hero !text-[44px] !leading-[52px] m-0">
             Weekly Field Review · <em className="text-ink-3">Week {weekNo}</em>
           </h1>
-          <p className="t-italic !text-[17px] m-0">“A deliberate pause before setting the next week’s steps.”</p>
+          <p className="t-italic !text-[17px] m-0">Look back on your week before you plan the next one.</p>
         </div>
         <div className="flex items-center gap-4">
           <span className={`w-[86px] h-[86px] rounded-xl grid place-items-center text-center -rotate-3 ${inProgress ? 'bg-[var(--docket)]' : 'bg-[var(--ochre-wash)] ring-1 ring-[var(--ochre-tint)]'}`}>
@@ -155,7 +144,7 @@ export default function WeeklyReviewRoute() {
       {!review ? (
         <div className="kh-empty mb-10">
           <span className="t-h2 text-ink">Nothing was recorded this week.</span>
-          <span>Once habits are scheduled and kept, the week’s ledger fills itself.</span>
+          <span>This fills in as you do your habits.</span>
         </div>
       ) : (
         <>
@@ -171,7 +160,7 @@ export default function WeeklyReviewRoute() {
                 ) : null}
               </div>
               <span className="font-serif text-[46px] leading-[52px] text-[var(--laurel-deep)] t-num">{duration(review.totalMinutes)}</span>
-              <span className="t-caption !text-[13px]">Prior week logged {duration(review.previousMinutes)} across your rhythms.</span>
+              <span className="t-caption !text-[13px]">Last week you spent {duration(review.previousMinutes)} on your habits.</span>
               <div className="flex items-end gap-2 h-[70px] mt-auto">
                 {perf.days.map((d) => (
                   <span key={d.date} className="flex-1 flex flex-col items-center gap-1.5" title={`${d.date}: ${duration(d.minutes)}`}>
@@ -199,7 +188,7 @@ export default function WeeklyReviewRoute() {
                 {Math.round(review.consistency)}%<span className="font-sans text-[18px] text-laurel ml-1">yield</span>
               </span>
               <span className="t-caption !text-[13px]">
-                {review.points} points and {review.xp} XP pressed into the week.
+                You earned {review.points} points and {review.xp} XP this week.
               </span>
               <div className="mt-auto flex flex-col gap-3">
                 <Bar value={review.consistency / 100} />
@@ -207,18 +196,18 @@ export default function WeeklyReviewRoute() {
                   <span className="flex items-center gap-2">
                     <Flame size={14} className="text-[var(--ochre-deep)]" /> Longest stride
                   </span>
-                  <span className="font-serif text-[var(--ochre-deep)]">{review.streak}-day rhythm</span>
+                  <span className="font-serif text-[var(--ochre-deep)]">{review.streak}-day streak</span>
                 </div>
               </div>
             </section>
 
             <section className="kh-sheet p-6 flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
-                <span className="t-stamp text-ink-2">03 / Mountain contribution</span>
+                <span className="t-stamp text-ink-2">03 / Time per mountain</span>
                 <Mountain size={16} className="text-ink-4" />
               </div>
-              <span className="t-italic !text-[13px]">Elevation breakdown</span>
-              {contributions.length === 0 ? <span className="t-caption">No time was logged against any rhythm.</span> : null}
+              <span className="t-italic !text-[13px]">Where your time went</span>
+              {contributions.length === 0 ? <span className="t-caption">No time was logged on any habit.</span> : null}
               <div className="flex flex-col gap-3">
                 {contributions.map(([name, minutes], i) => (
                   <div key={name} className="flex flex-col gap-1.5">
@@ -243,7 +232,7 @@ export default function WeeklyReviewRoute() {
 
           <section className="kh-card p-6 mb-10 flex flex-wrap items-center gap-8">
             <div className="flex flex-col gap-1 min-w-[220px]">
-              <span className="t-stamp text-ink-3">League ledger</span>
+              <span className="t-stamp text-ink-3">Points this week</span>
               <span className="font-serif text-[30px] leading-9 t-num">
                 {perf.totalPoints}
                 <span className="text-[16px] text-ink-4">{perf.weeklyTarget ? ` / ${perf.weeklyTarget} points` : ' points'}</span>
@@ -258,7 +247,7 @@ export default function WeeklyReviewRoute() {
                 <>
                   <Bar value={perf.targetProgress} tone={perf.targetMet ? 'laurel' : 'ochre'} />
                   <span className="t-caption">
-                    {perf.targetMet ? 'Target met — the bonus is pressed in.' : `${perf.pointsToTarget} points still to reach the week’s target.`}
+                    {perf.targetMet ? 'Target met, and the bonus is added.' : `${perf.pointsToTarget} points still to reach the week’s target.`}
                     {perf.targetStreak > 0 ? ` ${perf.targetStreak} weeks in a row on target.` : ''}
                   </span>
                 </>
@@ -300,7 +289,7 @@ export default function WeeklyReviewRoute() {
               tag="Morning momentum"
               tagTone="text-ink-3"
               lines={went}
-              empty="No rhythm stood out yet this week."
+              empty="No habit stood out yet this week."
               icon={<Sprout size={13} />}
             />
             <Inquiry
@@ -309,7 +298,7 @@ export default function WeeklyReviewRoute() {
               tag="Energy misalignment"
               tagTone="text-[var(--ochre-deep)]"
               lines={hard}
-              empty="Nothing weighed heavily — or nothing has been recorded yet."
+              empty="Nothing was hard this week, or nothing is recorded yet."
               icon={<TriangleAlert size={13} />}
             />
             <Inquiry
@@ -318,7 +307,7 @@ export default function WeeklyReviewRoute() {
               tag="Adjustment"
               tagTone="text-ink-3"
               lines={review.recommendations}
-              empty="Keep the current cadence — no change is called for."
+              empty="Keep going as you are. No change is needed."
               icon={<Wind size={13} />}
             />
           </div>
@@ -329,13 +318,13 @@ export default function WeeklyReviewRoute() {
         <section key={p.id} className="kh-docket p-6 mb-6 flex flex-wrap items-center gap-6">
           <div className="flex flex-col gap-2 flex-1 min-w-[320px]">
             <span className="t-stamp text-ink-3 flex items-center gap-2">
-              <SlidersHorizontal size={14} /> Observed rhythm pattern
+              <SlidersHorizontal size={14} /> A pattern we noticed
             </span>
             <span className="text-[19px] font-semibold [text-wrap:balance]">
-              {p.habitName} holds a {Math.round(p.completionRate)}% cadence.
+              You did {p.habitName} {Math.round(p.completionRate)}% of the time.
             </span>
             <span className="text-[14.5px] text-ink-2 [text-wrap:pretty]">
-              {p.rationale} Would you like to {p.proposedTarget > p.currentTarget ? 'gently expand' : 'ease'} the session from <b>{duration(p.currentTarget)} → {duration(p.proposedTarget)}</b>, or keep the steady current rhythm?
+              {p.rationale} Would you like to {p.proposedTarget > p.currentTarget ? 'lengthen' : 'shorten'} the session from <b>{duration(p.currentTarget)} → {duration(p.proposedTarget)}</b>, or keep it as it is?
             </span>
           </div>
           <div className="flex gap-3">
@@ -351,7 +340,7 @@ export default function WeeklyReviewRoute() {
 
       <footer className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-[var(--rule)]">
         <span className="t-italic !text-[13px] flex items-center gap-2">
-          <Compass size={14} /> The ledger is recomputed from the record — a late tick still counts, honestly.
+          <Compass size={14} /> This updates from what you record. A habit ticked late still counts.
         </span>
         <Btn kind="ochre" onClick={() => navigate({ name: 'journey' })}>
           Open the Journey board <ArrowRight size={15} />

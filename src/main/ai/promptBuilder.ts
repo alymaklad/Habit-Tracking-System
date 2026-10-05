@@ -15,7 +15,7 @@ function hours(minutes: number): string {
 }
 
 /** The facts the Actor must respect, rendered once and reused by every prompt. */
-export function renderContext(input: GoalDraftInput, ctx: PlanningContext): string {
+export function renderContext(input: Pick<GoalDraftInput, 'weeklyMinutesBudget'> & { targetDate?: string | null }, ctx: PlanningContext): string {
   const lines: string[] = []
   lines.push(`Today is ${ctx.today} (timezone ${ctx.timezone}).`)
   if (input.targetDate) lines.push(`The user wants to reach this goal by ${input.targetDate}.`)

@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { writeFileSync } from 'node:fs'
+import { statSync, writeFileSync } from 'node:fs'
 import {
   app,
   BrowserWindow,
@@ -277,7 +277,28 @@ function nativeToast(title: string, body: string): void {
 
 // ------------------------------------------------------------- lifecycle
 
-app.on('second-instance', () => showWindow())
+/** When this copy started; a build written after it means the files on disk are newer. */
+const STARTED_AT = Date.now()
+
+function newerBuildOnDisk(): boolean {
+  try {
+    return statSync(__filename).mtimeMs > STARTED_AT
+  } catch {
+    return false
+  }
+}
+
+// Opening the app again normally just shows this window. But if the app was rebuilt or
+// updated since this copy started, showing it would keep the old version on screen:
+// restart on the new files instead, closing properly so the database is saved.
+app.on('second-instance', () => {
+  if (newerBuildOnDisk()) {
+    app.relaunch()
+    app.quit()
+    return
+  }
+  showWindow()
+})
 
 // Journal attachments are served from their own folder through a private scheme, so the
 // renderer's strict CSP can allow exactly that and nothing else from disk.
@@ -335,6 +356,8 @@ async function start(): Promise<void> {
     // how a screen could pass while being blank with real data. The profile is a
     // throwaway directory, so nothing here touches a real database.
     if (process.env.AHL_UI_CHECK) {
+      // The check walks every screen itself; the first-time tour would sit on top of them.
+      ctx.repos.settings.save({ tourDone: true })
       try {
         ctx.habits.create({
           name: 'Check Habit',
@@ -414,7 +437,10 @@ function buildContext(): AppContext {
       clientSecret: import.meta.env.MAIN_VITE_GOOGLE_CLIENT_SECRET
     },
     account: {
-      authUrl: import.meta.env.MAIN_VITE_NEON_AUTH_URL,
+      // The UI check walks every screen on an empty profile, so it runs without accounts.
+      // NEON_AUTH_URL in the environment points a run at another account service (a test
+      // branch, or a local stand-in) without rebuilding.
+      authUrl: process.env.AHL_UI_CHECK ? undefined : process.env.NEON_AUTH_URL || import.meta.env.MAIN_VITE_NEON_AUTH_URL,
       origin: import.meta.env.MAIN_VITE_NEON_AUTH_ORIGIN
     },
     toast: nativeToast,

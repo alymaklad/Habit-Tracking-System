@@ -21,7 +21,7 @@ import { firstName, greeting, longDate, time12, toMinutes, today } from '../lib/
 import { useShell } from '../khatwa/nav'
 import { CheckInModal } from '../khatwa/letgo'
 import { Page, SectionHead } from '../khatwa/Page'
-import { Alert, Btn, CheckBox, Dot, Eyebrow, LoadError, Loading, Ring, Stamp } from '../khatwa/ui'
+import { Alert, Btn, CheckBox, Dot, LoadError, Loading, Ring, Stamp } from '../khatwa/ui'
 
 type Everything = {
   todos: TodoView
@@ -61,9 +61,9 @@ function originStamp(card: DashboardCard): { text: string; tone: 'laurel' | 'pla
   if (card.status === 'skipped') return { text: 'Rested', tone: 'plain' }
   if (card.status !== 'complete' && card.status !== 'partial') return null
   if (card.origin === 'timer') return { text: 'Verified', tone: 'laurel' }
-  if (card.origin === 'manual') return { text: 'Stamped', tone: 'plain' }
+  if (card.origin === 'manual') return { text: 'Done', tone: 'plain' }
   if (card.origin === 'assumed') return { text: 'Assumed', tone: 'ochre' }
-  return { text: 'Stamped', tone: 'plain' }
+  return { text: 'Done', tone: 'plain' }
 }
 
 function checkState(card: DashboardCard): 'done' | 'partial' | 'missed' | 'open' {
@@ -97,7 +97,7 @@ function StepTools({ card, group, onBusy }: { card: DashboardCard; group: TodoGr
     <div className="flex flex-col gap-4 pt-3 pl-[42px]">
       {error ? <Alert>{error}</Alert> : null}
       <div className="flex flex-col gap-1.5">
-        <span className="t-stamp text-ink-4">Steps within this rhythm</span>
+        <span className="t-stamp text-ink-4">Steps in this habit</span>
         {items.length === 0 ? <span className="t-caption italic font-serif !text-[13px]">No sub-steps yet — finishing every step also completes the habit.</span> : null}
         {items.map((item) => (
           <div key={item.id} className="flex items-center gap-2.5 group">
@@ -119,7 +119,7 @@ function StepTools({ card, group, onBusy }: { card: DashboardCard; group: TodoGr
           }}
         >
           <Plus size={14} className="text-ink-4" />
-          <input className="kh-input !text-[13.5px] !py-1" placeholder="Add a step within this rhythm…" value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <input className="kh-input !text-[13.5px] !py-1" placeholder="Add a step to this habit…" value={draft} onChange={(e) => setDraft(e.target.value)} />
         </form>
       </div>
       <div className="flex flex-wrap items-end gap-3">
@@ -261,7 +261,7 @@ function MarginNotes({ todos }: { todos: TodoView }) {
         }}
       >
         <span className="text-ink-4 font-serif">—</span>
-        <input className="kh-input !font-serif !text-[16px] !py-1.5" placeholder="Add a margin note for today…" value={draft} onChange={(e) => setDraft(e.target.value)} />
+        <input className="kh-input !font-serif !text-[16px] !py-1.5" placeholder="Add a to-do for today…" value={draft} onChange={(e) => setDraft(e.target.value)} />
       </form>
       {manual.length === 0 && todos.suggestions.length > 0 ? (
         <div className="mt-3 flex flex-col gap-1.5">
@@ -356,7 +356,7 @@ export default function Today() {
   })
 
   if (dash.error) return <Page><LoadError message={dash.error} onRetry={dash.refetch} /></Page>
-  if (!dash.data) return <Page><Loading label="Opening today’s folio…" /></Page>
+  if (!dash.data) return <Page><Loading label="Loading today…" /></Page>
 
   const d = dash.data
   const name = firstName(settings?.displayName ?? '')
@@ -368,9 +368,6 @@ export default function Today() {
     <Page>
       <header className="flex flex-wrap items-end justify-between gap-6 mb-9">
         <div className="flex flex-col gap-3">
-          <Eyebrow>
-            Al-Khatwa · Field log <Dot /> <span className="is-quiet">{d.weekLabel}</span>
-          </Eyebrow>
           <h1 className="t-hero m-0">
             {greeting()}
             {name ? `, ${name}` : ''}.
@@ -389,7 +386,7 @@ export default function Today() {
             </span>
             <span className="text-[12.5px] text-[var(--ochre-deep)] inline-flex items-center gap-1.5">
               <Flame size={13} />
-              {(rest.data?.streak ?? 0) > 0 ? `${rest.data?.streak}-day unbroken rhythm` : `${d.dayPoints} of ${d.dayPointsMax} points today`}
+              {(rest.data?.streak ?? 0) > 0 ? `${rest.data?.streak}-day streak` : `${d.dayPoints} of ${d.dayPointsMax} points today`}
             </span>
           </div>
         </div>
@@ -406,7 +403,7 @@ export default function Today() {
           <div className="relative flex flex-wrap items-center justify-between gap-8">
             <div className="flex flex-col gap-3 min-w-0 flex-1 basis-[420px]">
               <div className="flex items-center gap-3 flex-wrap">
-                <Stamp tone="ochre-solid">Your next step · in rhythm</Stamp>
+                <Stamp tone="ochre-solid">Your next step</Stamp>
                 <span className="inline-flex items-center gap-2 text-[13px] text-ink-3">
                   <Dot /> {windowLabel(next, nowMinutes)}
                 </span>
@@ -456,9 +453,9 @@ export default function Today() {
       ) : cards.length > 0 ? (
         <section className="kh-card px-8 py-7 mb-11 flex flex-wrap items-center justify-between gap-6">
           <div className="flex flex-col gap-2">
-            <Stamp tone="laurel">Every step sealed</Stamp>
+            <Stamp tone="laurel">All done for today</Stamp>
             <h2 className="t-h1 m-0">The day’s trail is walked.</h2>
-            <p className="t-italic m-0">{d.dayPoints} points pressed into today’s page. Rest is part of the climb.</p>
+            <p className="t-italic m-0">You earned {d.dayPoints} points today. Rest is part of the climb.</p>
           </div>
           <Btn kind="ruled" onClick={() => navigate({ name: 'review' })}>
             <BookOpen size={15} /> Open the weekly review
@@ -469,21 +466,21 @@ export default function Today() {
       <div className="grid gap-10 min-[1100px]:grid-cols-[minmax(0,1.45fr)_minmax(300px,1fr)]">
         <section className="min-w-0">
           <SectionHead
-            title="Today’s Steps & Rhythms"
+            title="Today’s habits"
             meta={`${done} of ${cards.length} completed`}
             action={
               <Btn kind="ghost" onClick={() => navigate({ name: 'habits', edit: 'new' })}>
-                <Plus size={14} /> New rhythm
+                <Plus size={14} /> New habit
               </Btn>
             }
           />
           {cards.length === 0 ? (
             <div className="kh-empty">
               <span className="t-h2 text-ink">No steps are scheduled for today.</span>
-              <span className="max-w-[420px]">Plant a habit, or choose a mountain and let the cartographer draft your daily rhythms.</span>
+              <span className="max-w-[420px]">Add a habit, or choose a mountain and let the planner suggest your habits.</span>
               <div className="flex gap-3 mt-2">
                 <Btn kind="laurel" onClick={() => navigate({ name: 'habits', edit: 'new' })}>
-                  Plant a habit
+                  Add a habit
                 </Btn>
                 <Btn kind="ruled" onClick={() => navigate({ name: 'expedition' })}>
                   Choose a mountain
@@ -513,7 +510,7 @@ export default function Today() {
                 <Flame size={18} />
               </span>
               <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-[14px] font-semibold">Weekly rhythm adherence</span>
+                <span className="text-[14px] font-semibold">This week so far</span>
                 <span className="t-caption">
                   {rest.data.consistency === null ? 'Nothing scheduled yet this week' : `${Math.round(rest.data.consistency * 100)}% of this week’s scheduled steps completed`}
                 </span>
@@ -537,9 +534,9 @@ export default function Today() {
 
         <aside className="min-w-0 flex flex-col gap-6">
           <div className="flex items-start justify-between gap-4">
-            <h2 className="t-h2 m-0 [text-wrap:balance]">The Desk Drawer &amp; Daily Margin</h2>
+            <h2 className="t-h2 m-0 [text-wrap:balance]">Notes &amp; to-dos</h2>
             <span className="t-stamp text-ink-4 text-right shrink-0">
-              Folio N°
+              Day
               <br />
               {dayOfYear}
             </span>
@@ -547,22 +544,22 @@ export default function Today() {
 
           <div className="kh-card kh-tape px-6 pt-7 pb-6">
             <div className="flex items-baseline justify-between gap-3 mb-3">
-              <span className="t-stamp text-[var(--ochre-deep)]">Field marginalia · today’s focus</span>
+              <span className="t-stamp text-[var(--ochre-deep)]">Today’s to-dos</span>
               <span className="t-caption">{rest.data ? `${rest.data.todos.manualTotal} notes` : ''}</span>
             </div>
-            {rest.error ? <Alert>{rest.error}</Alert> : rest.data ? <MarginNotes todos={rest.data.todos} /> : <Loading label="Opening the drawer…" />}
+            {rest.error ? <Alert>{rest.error}</Alert> : rest.data ? <MarginNotes todos={rest.data.todos} /> : <Loading label="Loading…" />}
           </div>
 
           <div className="kh-sheet overflow-hidden flex items-center gap-4 p-4">
             <img src={emblem} alt="" className="w-[88px] h-[88px] rounded-full object-cover mix-blend-multiply shrink-0 dark:mix-blend-normal" />
             <div className="flex flex-col gap-1 min-w-0">
-              <span className="t-stamp text-ink-4">Today’s tally</span>
+              <span className="t-stamp text-ink-4">Today’s points</span>
               <span className="font-serif text-[30px] leading-9 t-num">
                 {d.dayPoints}
                 <span className="text-[16px] text-ink-4"> / {d.dayPointsMax} points</span>
               </span>
               <span className="t-caption">
-                Level {d.level.level} · {d.level.title} — {d.level.xpToNext} XP to the next ridge
+                Level {d.level.level} · {d.level.title} — {d.level.xpToNext} XP to the next level
               </span>
             </div>
           </div>
@@ -597,14 +594,14 @@ export default function Today() {
             </span>
             <span className="flex flex-col gap-1">
               <span className="flex items-center gap-2">
-                <span className="text-[14px] font-semibold">Sunset closing indicator</span>
+                <span className="text-[14px] font-semibold">Weekly review</span>
                 <Stamp tone={isFriday ? 'laurel' : 'plain'} className="!text-[10px] !py-0">
                   {isFriday ? 'Ready' : 'Locked'}
                 </Stamp>
               </span>
               <span className="text-[13.5px] leading-[21px] text-ink-3 [text-wrap:pretty]">
                 {isFriday
-                  ? 'The week closes tonight. Review the footsteps, seal the margins, and set next week’s intention.'
+                  ? 'The week ends tonight. Look back on it and plan next week.'
                   : `The weekly review opens on Friday — ${daysToReview} ${daysToReview === 1 ? 'day' : 'days'} from now. Your week runs Saturday to Friday.`}
               </span>
             </span>
@@ -613,8 +610,8 @@ export default function Today() {
           <div className="kh-docket flex items-center gap-3 px-5 py-4">
             <BookOpen size={17} className="text-ink-3" />
             <span className="flex flex-col flex-1 min-w-0">
-              <span className="text-[14px]">Field folio archival record</span>
-              <span className="t-caption">Stored locally in an offline-first journal vault</span>
+              <span className="text-[14px]">Your data</span>
+              <span className="t-caption">Saved on this computer, and works offline</span>
             </span>
             <span className="t-stamp !text-[10.5px] text-ink-4">Local</span>
           </div>

@@ -1577,3 +1577,200 @@
     background-color: var(--sheet);
   }
 }
+
+/* --------------------------------------------------------- first-time tour */
+
+@layer components {
+  .kh-tour {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+  }
+  /* Dims the app while leaving the lit area clear: one element, a very wide shadow. */
+  .kh-tour-hole {
+    position: fixed;
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 2px var(--laurel),
+      0 0 0 9999px rgba(36, 33, 29, 0.64);
+    pointer-events: none;
+    transition:
+      top 0.35s ease,
+      left 0.35s ease,
+      width 0.35s ease,
+      height 0.35s ease;
+  }
+  .kh-tour-dim {
+    position: fixed;
+    inset: 0;
+    background: rgba(36, 33, 29, 0.64);
+  }
+  [data-theme='dark'] .kh-tour-dim {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .kh-tour-card {
+    position: fixed;
+    width: min(400px, calc(100vw - 32px));
+    padding: 22px 24px 18px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid var(--rule-soft);
+    box-shadow: var(--shadow-float);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: kh-tour-in 0.28s ease both;
+  }
+  .kh-tour-card.is-centred {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    animation-name: kh-tour-in-centred;
+  }
+  .kh-tour-card.is-wide {
+    width: min(560px, calc(100vw - 32px));
+    padding: 28px 32px 22px;
+  }
+  @keyframes kh-tour-in {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+  @keyframes kh-tour-in-centred {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 6px));
+    }
+  }
+  [data-reduce-motion='true'] .kh-tour-card,
+  [data-reduce-motion='true'] .kh-tour-hole {
+    animation: none;
+    transition: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .kh-tour-card,
+    .kh-tour-hole {
+      animation: none;
+      transition: none;
+    }
+  }
+
+  .kh-tour-progress {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .kh-tour-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .kh-tour-brand img:first-child {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+  }
+  .kh-tour-wordmark {
+    height: 34px;
+    width: auto;
+  }
+  [data-theme='dark'] .kh-tour-wordmark {
+    filter: invert(0.9) hue-rotate(180deg);
+  }
+  .kh-tour-title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 27px;
+    line-height: 34px;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .kh-tour-card.is-wide .kh-tour-title {
+    font-size: 36px;
+    line-height: 42px;
+  }
+  .kh-tour-body {
+    margin: 0;
+    font-size: 15px;
+    line-height: 24px;
+    color: var(--ink-2);
+    text-wrap: pretty;
+  }
+  .kh-tour-body b,
+  .kh-tour-ideas b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .kh-tour-ideas {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .kh-tour-ideas li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 14.5px;
+    line-height: 22px;
+    color: var(--ink-2);
+  }
+  .kh-tour-ideas svg {
+    margin-top: 2px;
+    flex-shrink: 0;
+    color: var(--laurel);
+  }
+  .kh-tour-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .kh-tour-actions button {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--rule);
+    background: var(--sheet);
+    text-align: left;
+    color: var(--ink);
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease;
+  }
+  .kh-tour-actions button:hover {
+    border-color: var(--laurel);
+    background: var(--laurel-wash);
+  }
+  .kh-tour-actions svg {
+    margin-top: 2px;
+    flex-shrink: 0;
+    color: var(--laurel);
+  }
+  .kh-tour-actions b {
+    display: block;
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .kh-tour-actions span span {
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+  .kh-tour-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+  }
+}

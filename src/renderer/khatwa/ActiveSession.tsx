@@ -60,7 +60,7 @@ export default function ActiveSession({ occurrenceId, onClose, onNavigateMountai
       <div className="flex items-center justify-between px-10 py-6">
         <span className="t-stamp text-ink-3">Active session {card?.timerRunning ? '· the clock is running' : '· paused'}</span>
         <Btn kind="soft" size="sm" onClick={onClose}>
-          <Minimize2 size={14} /> Step back to the folio
+          <Minimize2 size={14} /> Back to the app
         </Btn>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-8 px-8 text-center">

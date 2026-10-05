@@ -121,7 +121,7 @@ export function Loading() {
   return (
     <div className="flex items-center gap-3 py-16 justify-center">
       <span className="kh-dot kh-breathe" />
-      <span className="t-italic">Opening the folio…</span>
+      <span className="t-italic">Loading…</span>
     </div>
   )
 }

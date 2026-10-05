@@ -37,13 +37,13 @@ export default function HabitDetail({ id }: { id: number }) {
   }
 
   if (loadError) return <Page><LoadError message={loadError} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Reading the rhythm’s record…" /></Page>
+  if (!data) return <Page><Loading label="Loading the habit…" /></Page>
   const d = data.d
   if (!d) {
     return (
       <Page>
         <div className="kh-empty">
-          <span className="t-h2 text-ink">This habit is no longer in the folio.</span>
+          <span className="t-h2 text-ink">This habit no longer exists.</span>
           <Btn kind="ruled" onClick={() => navigate({ name: 'habits' })}>
             Back to habits
           </Btn>
@@ -61,13 +61,13 @@ export default function HabitDetail({ id }: { id: number }) {
   return (
     <Page>
       <button className="flex items-center gap-2 text-[15px] text-[var(--ochre-deep)] mb-5 hover:underline" onClick={() => navigate({ name: 'habits' })}>
-        <ArrowLeft size={16} /> Back to habits &amp; rhythms
+        <ArrowLeft size={16} /> Back to habits
       </button>
 
       <header className="flex flex-wrap items-end justify-between gap-6 mb-9">
         <div className="flex flex-col gap-3 min-w-0">
           <Eyebrow>
-            Rhythm record <span className="is-quiet">/ {h.active ? 'active' : 'paused — history kept'}</span>
+            Habit <span className="is-quiet">· {h.active ? 'active' : 'paused, history kept'}</span>
           </Eyebrow>
           <h1 className="t-hero !text-[44px] !leading-[52px] m-0">{h.name}</h1>
           <span className="font-serif italic text-[16px] text-ink-3">
@@ -84,7 +84,7 @@ export default function HabitDetail({ id }: { id: number }) {
             {h.active ? <Pause size={14} /> : <Play size={14} />} {h.active ? 'Pause' : 'Resume'}
           </Btn>
           <Btn kind="laurel" onClick={() => setEditing(true)}>
-            <Pencil size={14} /> Edit rhythm
+            <Pencil size={14} /> Edit habit
           </Btn>
         </div>
       </header>
@@ -96,7 +96,7 @@ export default function HabitDetail({ id }: { id: number }) {
           <div className="flex flex-col gap-2 flex-1 min-w-[300px]">
             <Stamp tone="ochre-solid" className="self-start">Adaptive suggestion</Stamp>
             <p className="m-0 font-serif text-[19px] leading-[28px]">
-              You kept this rhythm on {Math.round(d.proposal.completionRate)}% of its days. Consider {d.proposal.proposedTarget > d.proposal.currentTarget ? 'increasing' : 'easing'} {duration(d.proposal.currentTarget)} → {duration(d.proposal.proposedTarget)}.
+              You did this habit on {Math.round(d.proposal.completionRate)}% of its days. Consider {d.proposal.proposedTarget > d.proposal.currentTarget ? 'increasing' : 'easing'} {duration(d.proposal.currentTarget)} → {duration(d.proposal.proposedTarget)}.
             </p>
             <span className="t-caption">{d.proposal.rationale} Nothing changes unless you accept.</span>
           </div>

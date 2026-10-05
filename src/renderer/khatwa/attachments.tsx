@@ -145,7 +145,7 @@ export function AttachmentTray({ items, onChange }: { items: Attachment[]; onCha
           <ImagePlus size={15} /> Add a photo or file
         </button>
         <span className="t-caption flex items-center gap-1.5">
-          <Paperclip size={12} /> {busy ? 'Copying into your folio…' : over ? 'Let go to add it' : 'or drop it onto this page · images, PDF, text or Office, up to 25 MB'}
+          <Paperclip size={12} /> {busy ? 'Adding…' : over ? 'Let go to add it' : 'or drop it onto this page · images, PDF, text or Office, up to 25 MB'}
         </span>
       </div>
     </div>

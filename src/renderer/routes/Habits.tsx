@@ -9,7 +9,7 @@ import { DotMatrix } from '../khatwa/charts'
 import HabitEditor from '../khatwa/HabitEditor'
 import { useShell } from '../khatwa/nav'
 import { Page } from '../khatwa/Page'
-import { Alert, Bar, Btn, Dot, Eyebrow, IconBtn, LoadError, Loading, Ring, Stamp } from '../khatwa/ui'
+import { Alert, Bar, Btn, Dot, IconBtn, LoadError, Loading, Ring, Stamp } from '../khatwa/ui'
 
 type Data = {
   habits: Habit[]
@@ -95,7 +95,7 @@ function HabitCard({
             </button>
           ) : (
             <Stamp className="!normal-case !tracking-normal !font-sans !font-medium !text-[12px]">
-              <Sprout size={13} /> Unanchored (personal cultivation)
+              <Sprout size={13} /> Not part of a mountain
             </Stamp>
           )}
           <span className="flex items-center gap-1">
@@ -105,7 +105,7 @@ function HabitCard({
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <button className="text-left hover:underline decoration-[var(--rule)] underline-offset-4" onClick={() => navigate({ name: 'habit', id: habit.id })} title="Open the rhythm’s record">
+          <button className="text-left hover:underline decoration-[var(--rule)] underline-offset-4" onClick={() => navigate({ name: 'habit', id: habit.id })} title="Open the habit’s record">
             <h3 className="font-serif text-[23px] leading-[30px] m-0 [text-wrap:balance]">{habit.name}</h3>
           </button>
           <span className="font-serif italic text-[13.5px] text-ink-3">
@@ -145,7 +145,7 @@ function HabitCard({
               <span className="flex items-center gap-2 text-laurel">
                 <Timer size={14} /> Completed today · {duration(card.loggedMinutes)}
               </span>
-              <span className="t-stamp !text-[10.5px] text-laurel">Stamped &amp; inked ✓</span>
+              <span className="t-stamp !text-[10.5px] text-laurel">Done ✓</span>
             </>
           ) : (
             <>
@@ -194,7 +194,7 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
   }, [data, weekStart, now])
 
   if (loadError) return <Page><LoadError message={loadError} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Laying out the rhythms…" /></Page>
+  if (!data) return <Page><Loading label="Laying out the habits…" /></Page>
 
   const active = data.habits.filter((h) => h.active)
   const paused = data.habits.filter((h) => !h.active)
@@ -221,18 +221,15 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
     <Page>
       <header className="flex flex-wrap items-end justify-between gap-8 mb-9">
         <div className="flex flex-col gap-3 max-w-[600px]">
-          <Eyebrow>
-            Folio IV · Rhythms <Dot /> <span className="is-quiet">Ascension pace ledger</span>
-          </Eyebrow>
-          <h1 className="t-hero !text-[44px] !leading-[52px] m-0">Habits &amp; Daily Rhythms</h1>
-          <p className="t-italic !text-[17px] m-0">The small deliberate steps that move the mountains.</p>
+          <h1 className="t-hero !text-[44px] !leading-[52px] m-0">Habits</h1>
+          <p className="t-italic !text-[17px] m-0">Small steps you repeat, that move you toward your goals.</p>
         </div>
         <div className="flex flex-col items-end gap-4">
           <div className="kh-sheet flex gap-8 px-6 py-4">
             <div className="flex flex-col">
-              <span className="t-stamp !text-[10.5px] text-ink-4">Active rhythms</span>
+              <span className="t-stamp !text-[10.5px] text-ink-4">Active habits</span>
               <span className="font-serif text-[26px] leading-8">
-                {active.length} <span className="font-sans text-[12px] text-ink-4">disciplines</span>
+                {active.length} <span className="font-sans text-[12px] text-ink-4">habits</span>
               </span>
             </div>
             <div className="flex flex-col">
@@ -243,7 +240,7 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
             </div>
           </div>
           <Btn kind="laurel" onClick={() => setEditing('new')}>
-            <Sprout size={16} /> Plant new habit rhythm
+            <Sprout size={16} /> Add a habit
           </Btn>
         </div>
       </header>
@@ -254,11 +251,11 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
         <img src={emblem} alt="" className="w-[150px] h-[110px] rounded-lg object-cover mix-blend-multiply dark:mix-blend-normal" />
         <div className="flex flex-col gap-2 flex-1 min-w-[280px]">
           <span className="flex items-center gap-3">
-            <Stamp tone="laurel">Rhythm cadence</Stamp>
+            <Stamp tone="laurel">This week</Stamp>
             <span className="t-caption">Week of {dayMonth(weekStart)}</span>
           </span>
           <p className="m-0 text-[16px] leading-[26px] text-ink-2 [text-wrap:pretty]">
-            Habits are not chains of obligation; they are trail markers laid in the morning mist. Every recorded stroke builds the terrace on which your future summit rests.
+            A habit is a small step you repeat. Each one you do brings you closer to your goals.
           </p>
         </div>
         <Ring value={overall ?? 0} size={92} stroke={5}>
@@ -271,11 +268,11 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
           <div className="flex flex-col gap-3 flex-1 min-w-[320px]">
             <span className="flex items-center gap-3 flex-wrap">
               <Stamp tone="ochre-solid">{p.proposedTarget > p.currentTarget ? 'Adaptive recommendation · rise' : 'Adaptive recommendation · ease'}</Stamp>
-              <span className="t-caption">Detected by the cadence engine · week of {dayMonth(p.weekStart)}</span>
+              <span className="t-caption">Suggested from your last week · week of {dayMonth(p.weekStart)}</span>
             </span>
             <p className="font-serif text-[22px] leading-[31px] m-0 [text-wrap:pretty]">
               “You completed <b className="font-semibold">{p.habitName}</b> on <span className="text-[var(--ochre-deep)]">{Math.round(p.completionRate)}%</span> of its days.{' '}
-              {p.proposedTarget > p.currentTarget ? 'Your momentum is ready for higher elevation.”' : 'A gentler target will keep the rhythm alive.”'}
+              {p.proposedTarget > p.currentTarget ? 'You could take on a little more.”' : 'A gentler target will keep the habit alive.”'}
             </p>
             <div className="kh-docket px-4 py-3 text-[14px] text-ink-2 [text-wrap:pretty]">
               <b className="font-semibold">Suggested adjustment:</b> target {duration(p.currentTarget)} → {duration(p.proposedTarget)}. {p.rationale}
@@ -286,7 +283,7 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
               Review &amp; apply adjustment
             </Btn>
             <Btn kind="soft" onClick={() => void act(() => window.api.proposal.reject(p.id))}>
-              Keep current cadence
+              Keep it as it is
             </Btn>
           </div>
         </section>
@@ -294,15 +291,15 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
 
       <div className="flex items-center justify-between mb-5">
         <h2 className="t-h3 m-0 flex items-center gap-2">
-          <Sprout size={18} /> Current active disciplines
+          <Sprout size={18} /> Your active habits
         </h2>
-        <span className="t-stamp text-ink-4">Order by: time of day</span>
+        {/* <span className="t-stamp text-ink-4">Order by: time of day</span> */}
       </div>
 
       {active.length === 0 ? (
         <div className="kh-empty mb-10">
           <span className="t-h2 text-ink">Your first step starts here.</span>
-          <span className="max-w-[420px]">A habit is one small, repeatable step. Plant one here, or choose a mountain and let the cartographer draft several at once.</span>
+          <span className="max-w-[420px]">A habit is one small, repeatable step. Add one here, or choose a mountain and let the planner suggest several at once.</span>
           <Btn kind="laurel" onClick={() => setEditing('new')}>
             Create a habit
           </Btn>
@@ -320,8 +317,8 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
       <section className="kh-sheet p-7 mb-8">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-ink-3">Dot-matrix chronology</span>
-            <h2 className="t-h2 m-0">Weekly rhythm adherence (past {WEEKS} weeks)</h2>
+            <span className="t-stamp text-ink-3">History</span>
+            <h2 className="t-h2 m-0">Weekly habit adherence (past {WEEKS} weeks)</h2>
             <span className="t-caption">Each column is a Saturday-to-Friday week; three ink dots mark a third, two thirds and a full week kept.</span>
           </div>
           <div className="flex items-center gap-5 t-caption">
@@ -341,7 +338,7 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
 
       {paused.length > 0 ? (
         <section className="mb-8">
-          <h2 className="t-h3 mb-3">Resting rhythms</h2>
+          <h2 className="t-h3 mb-3">Resting habits</h2>
           <div className="flex flex-col gap-2">
             {paused.map((h) => (
               <div key={h.id} className="kh-row">
@@ -368,10 +365,10 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
           <Sprout size={22} />
         </span>
         <span className="flex flex-col flex-1 min-w-[240px]">
-          <span className="text-[17px] font-semibold">Terrace habit ecology</span>
+          <span className="text-[17px] font-semibold">How your habits connect</span>
           <span className="text-[14px] text-ink-3">
-            {plural(active.length, 'active habit')} support {plural(anchored.size, 'mountain pathway')}
-            {active.length - active.filter((h) => h.goalId !== null).length > 0 ? `, with ${active.length - active.filter((h) => h.goalId !== null).length} kept for personal cultivation` : ''}.
+            {plural(active.length, 'active habit')} support {plural(anchored.size, 'mountain')}
+            {active.length - active.filter((h) => h.goalId !== null).length > 0 ? `, with ${active.length - active.filter((h) => h.goalId !== null).length} not part of a mountain` : ''}.
           </span>
         </span>
         <span className="t-stamp text-ink-3 flex items-center gap-2">

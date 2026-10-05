@@ -29,16 +29,16 @@ const PAGES: Entry[] = [
   { id: 'p-journey', label: 'Journey', hint: 'Where have I been?', icon: Compass, route: { name: 'journey' }, kind: 'Page' },
   { id: 'p-mountains', label: 'Mountains', hint: 'Where am I going?', icon: Mountain, route: { name: 'mountains' }, kind: 'Page' },
   { id: 'p-me', label: 'Me', hint: 'Who am I becoming?', icon: UserRound, route: { name: 'me' }, kind: 'Page' },
-  { id: 'p-habits', label: 'Habits', hint: 'Daily rhythms', icon: CircleCheckBig, route: { name: 'habits' }, kind: 'Page' },
+  { id: 'p-habits', label: 'Habits', hint: 'Your habits', icon: CircleCheckBig, route: { name: 'habits' }, kind: 'Page' },
   { id: 'p-calendar', label: 'Calendar', hint: 'The week and the month', icon: CalendarDays, route: { name: 'calendar' }, kind: 'Page' },
   { id: 'p-todo', label: 'To-do', hint: 'Manual items and habit steps', icon: ListChecks, route: { name: 'todo' }, kind: 'Page' },
-  { id: 'p-progress', label: 'Progress', hint: 'Trends and the league ledger', icon: ChartSpline, route: { name: 'progress' }, kind: 'Page' },
+  { id: 'p-progress', label: 'Progress', hint: 'Charts and weekly points', icon: ChartSpline, route: { name: 'progress' }, kind: 'Page' },
   { id: 'p-letgo', label: 'Let Go', hint: 'What am I carrying?', icon: Backpack, route: { name: 'letgo' }, kind: 'Page' },
   { id: 'p-journal', label: 'Journal', hint: 'What am I learning?', icon: NotebookPen, route: { name: 'journal' }, kind: 'Page' },
-  { id: 'p-review', label: 'Weekly Review', hint: 'A deliberate pause', icon: BookOpen, route: { name: 'review' }, kind: 'Page' },
-  { id: 'p-ach', label: 'Achievements', hint: 'Seals and records', icon: Award, route: { name: 'achievements' }, kind: 'Page' },
+  { id: 'p-review', label: 'Weekly Review', hint: 'Look back on your week', icon: BookOpen, route: { name: 'review' }, kind: 'Page' },
+  { id: 'p-ach', label: 'Achievements', hint: 'Achievements and records', icon: Award, route: { name: 'achievements' }, kind: 'Page' },
   { id: 'p-settings', label: 'Settings', hint: 'Google, AI planner, scoring', icon: SlidersHorizontal, route: { name: 'settings' }, kind: 'Page' },
-  { id: 'a-habit', label: 'Plant a new habit', hint: 'Add a daily rhythm', icon: Plus, route: { name: 'habits', edit: 'new' }, kind: 'Action' },
+  { id: 'a-habit', label: 'Add a habit', hint: 'Create a new habit', icon: Plus, route: { name: 'habits', edit: 'new' }, kind: 'Action' },
   { id: 'a-letgo', label: 'Add something to let go', hint: 'Put it in the backpack', icon: Plus, route: { name: 'letgo', create: true }, kind: 'Action' },
   { id: 'a-reflect', label: 'Write a reflection', hint: 'Open the journal', icon: Plus, route: { name: 'journal', kind: 'free' }, kind: 'Action' },
   { id: 'a-daily', label: 'Daily check-in', hint: 'How am I feeling today?', icon: Plus, route: { name: 'journal', kind: 'daily' }, kind: 'Action' },
@@ -93,7 +93,7 @@ export default function Palette({ onClose, onGo }: { onClose: () => void; onGo: 
 
   return (
     <div className="kh-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="kh-palette kh-rise" role="dialog" aria-modal="true" aria-label="Search the folio">
+      <div className="kh-palette kh-rise" role="dialog" aria-modal="true" aria-label="Search">
         <div className="relative">
           <Search size={17} className="absolute left-[18px] top-1/2 -translate-y-1/2 text-ink-4" />
           <input
@@ -116,7 +116,7 @@ export default function Palette({ onClose, onGo }: { onClose: () => void; onGo: 
         </div>
         <div className="max-h-[420px] overflow-y-auto py-2">
           {entries.length === 0 ? (
-            <div className="px-5 py-6 t-italic">Nothing in the folio matches “{query}”.</div>
+            <div className="px-5 py-6 t-italic">Nothing matches “{query}”.</div>
           ) : (
             entries.map((e, i) => {
               const Icon = e.icon

@@ -28,7 +28,7 @@ const PHASE_LABEL: Record<GoalPlanPhase, string> = {
 }
 
 /** Name the phase in any provider error, so "too large" points at one request, not the whole run. */
-async function inPhase<T>(phase: GoalPlanPhase, fn: () => Promise<T>): Promise<T> {
+export async function inPhase<T>(phase: GoalPlanPhase, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn()
   } catch (err) {
@@ -39,9 +39,9 @@ async function inPhase<T>(phase: GoalPlanPhase, fn: () => Promise<T>): Promise<T
   }
 }
 
-const isRateLimit = (err: unknown): boolean => err instanceof AiError && err.kind === 'rate_limit'
+export const isRateLimit = (err: unknown): boolean => err instanceof AiError && err.kind === 'rate_limit'
 
-const STOPPED_EARLY =
+export const STOPPED_EARLY =
   'The AI provider hit its per-minute limit before the planner finished, so this is the last complete draft. Look it over, or try again in a minute for a fully checked plan.'
 
 /**

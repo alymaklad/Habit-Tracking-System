@@ -113,7 +113,7 @@ export function Welcome({ onSignedIn, onTryPlanner }: { onSignedIn: (user: Accou
         <img src={wordmark} alt="Khatwa" className="kh-welcome-wordmark" />
         <p className="kh-welcome-line">One step at a time.</p>
         <p className="kh-welcome-body">
-          Name a mountain you want to climb. Khatwa drafts the trail — the waypoints, the weekly rhythm, the first step — and keeps you walking it.
+          Name a big goal. Khatwa plans the milestones and weekly habits to get there, and helps you keep going.
         </p>
         <button className="kh-welcome-try" onClick={onTryPlanner}>
           <Compass size={18} />

@@ -27,7 +27,10 @@ import { reminderScheduler } from './application/reminderScheduler'
 import { pushRelay } from './platform/pushRelay'
 import { tokenVault } from './google/tokenVault'
 import { authService, type AuthCredentials } from './google/authService'
+import { shell } from 'electron'
 import { accountService } from './account/accountService'
+import { letGoPlanner } from './ai/letGoPlanner'
+import { letGoPlanService } from './application/letGoPlanService'
 import { sessionVault } from './account/sessionVault'
 import { tasksClient } from './google/tasksClient'
 import { calendarClient } from './google/calendarClient'
@@ -126,6 +129,14 @@ export function createContext(opts: ContextOptions) {
     }
   }
 
+  /** The configured AI provider; throws a readable error when it has no key yet. */
+  function aiClient() {
+    const provider = aiProvider()
+    const apiKey = aiApiKey(provider)
+    if (!apiKey) throw new Error(`Add a ${PROVIDERS[provider].label} API key in Settings to make a plan.`)
+    return PROVIDERS[provider].create(apiKey, aiModel(provider))
+  }
+
   const goalsApi = goalService({
     db,
     goals,
@@ -135,12 +146,7 @@ export function createContext(opts: ContextOptions) {
     habits: habitsApi,
     todos: todosApi,
     engine,
-    planner: () => {
-      const provider = aiProvider()
-      const apiKey = aiApiKey(provider)
-      if (!apiKey) throw new Error(`Add a ${PROVIDERS[provider].label} API key in Settings to draft a plan.`)
-      return anthropicGoalPlanner({ ai: PROVIDERS[provider].create(apiKey, aiModel(provider)) })
-    }
+    planner: () => anthropicGoalPlanner({ ai: aiClient() })
   })
 
   const reflect = reflectService({
@@ -152,6 +158,15 @@ export function createContext(opts: ContextOptions) {
       opts.attachmentsDir ?? (opts.dbPath === ':memory:' ? pathJoin(tmpdir(), `khatwa-attachments-${process.pid}`) : pathJoin(pathDirname(opts.dbPath), 'attachments'))
     ),
     goalViews: () => goalsApi.list()
+  })
+
+  const letGoPlans = letGoPlanService({
+    db,
+    settings,
+    habits: habitsApi,
+    reflect,
+    planningContext: (now) => goalsApi.planningContext(now),
+    planner: () => letGoPlanner({ ai: aiClient() })
   })
 
   const views = viewService({
@@ -196,7 +211,7 @@ export function createContext(opts: ContextOptions) {
     authUrl: opts.account?.authUrl || process.env.NEON_AUTH_URL || null,
     origin: opts.account?.origin || process.env.NEON_AUTH_ORIGIN || null,
     store: sessionVault(settings),
-    googleIdToken: () => auth.identityToken()
+    openExternal: (url) => shell.openExternal(url)
   })
   const tasks = tasksClient({ auth })
   const calendar = calendarClient({ auth })
@@ -268,6 +283,7 @@ export function createContext(opts: ContextOptions) {
     habits: habitsApi,
     todos: todosApi,
     goals: goalsApi,
+    letGoPlans,
     reflect,
     views,
     notifications,

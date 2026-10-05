@@ -180,7 +180,7 @@ export function Alert({ children, tone = 'error' }: { children: ReactNode; tone?
   )
 }
 
-export function Loading({ label = 'Opening the folio…' }: { label?: string }) {
+export function Loading({ label = 'Loading…' }: { label?: string }) {
   return (
     <div className="flex items-center gap-3 py-16 justify-center text-ink-3">
       <span className="kh-dot kh-breathe" />

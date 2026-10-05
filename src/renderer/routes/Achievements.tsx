@@ -3,7 +3,7 @@ import type { AchievementView, PersonalRecordView } from '@shared/types'
 import { useData } from '../hooks/useData'
 import { dayMonth } from '../lib/khatwa'
 import { Page, PageHead } from '../khatwa/Page'
-import { Bar, Dot, LoadError, Loading, Stamp } from '../khatwa/ui'
+import { Bar, LoadError, Loading, Stamp } from '../khatwa/ui'
 import { SealGlyph } from './Me'
 
 type Filter = 'all' | 'pressed' | 'pending'
@@ -16,7 +16,7 @@ export default function Achievements() {
   }, [])
 
   if (error) return <Page><LoadError message={error} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Opening the seal cabinet…" /></Page>
+  if (!data) return <Page><Loading label="Loading achievements…" /></Page>
 
   const pressed = data.achievements.filter((a) => a.unlockedAt)
   const shown = data.achievements
@@ -26,17 +26,11 @@ export default function Achievements() {
   return (
     <Page>
       <PageHead
-        eyebrow={
-          <>
-            Tactile markings <Dot /> <span className="is-quiet">Pressed through trial &amp; quiet resolve</span>
-          </>
-        }
-        title="Archival Seals & Wax Stamps"
-        lede="Each seal is pressed by the record itself — never granted, never removed except by an honest correction."
+        title="Achievements"
         aside={
           <div className="kh-sheet px-6 py-4 flex gap-8">
             <span className="flex flex-col">
-              <span className="t-stamp !text-[10.5px] text-ink-4">Pressed</span>
+              <span className="t-stamp !text-[10.5px] text-ink-4">Earned</span>
               <span className="font-serif text-[30px] leading-9 text-[var(--ochre-deep)]">{pressed.length}</span>
             </span>
             <span className="flex flex-col">
@@ -50,8 +44,8 @@ export default function Achievements() {
       <div className="kh-segmented mb-6">
         {(
           [
-            ['all', 'All seals'],
-            ['pressed', 'Pressed'],
+            ['all', 'All'],
+            ['pressed', 'Earned'],
             ['pending', 'Still ahead']
           ] as const
         ).map(([k, label]) => (
@@ -72,7 +66,7 @@ export default function Achievements() {
             <p className="t-caption !text-[12.5px] m-0 [text-wrap:pretty]">{a.description}</p>
             <div className="mt-auto w-full pt-2">
               {a.unlockedAt ? (
-                <Stamp tone="ochre">Pressed · {dayMonth(a.unlockedAt.slice(0, 10))}</Stamp>
+                <Stamp tone="ochre">Earned · {dayMonth(a.unlockedAt.slice(0, 10))}</Stamp>
               ) : (
                 <div className="flex flex-col gap-1.5">
                   <Bar value={a.progress} thin />
@@ -86,11 +80,11 @@ export default function Achievements() {
 
       <section>
         <div className="flex flex-col gap-1 mb-4">
-          <span className="t-stamp text-[var(--ochre-deep)]">Permanent inscriptions</span>
+          <span className="t-stamp text-[var(--ochre-deep)]">Records</span>
           <h2 className="t-h1 !text-[30px] m-0">Personal records</h2>
         </div>
         {data.records.length === 0 ? (
-          <div className="kh-empty">Records are inscribed as your weeks fill in.</div>
+          <div className="kh-empty">Your records appear as the weeks fill in.</div>
         ) : (
           <div className="kh-sheet divide-y divide-[var(--rule)]">
             {data.records.map((r) => (

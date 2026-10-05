@@ -17,7 +17,7 @@ import type { CalendarBlock, GoalObstacle, GoalView, GuideInsight, Habit, LetGoV
 import MindMap from '../components/MindMap'
 import { useData } from '../hooks/useData'
 import { describeRecurrence, duration, saturdayOf } from '../lib/format'
-import { currentMilestone, dayMonth, daysBetween, goalProgress, isoWeekday, monthYear, plural, roman, today, weekDates } from '../lib/khatwa'
+import { currentMilestone, dayMonth, daysBetween, goalProgress, isoWeekday, monthYear, plural, today, weekDates } from '../lib/khatwa'
 import { TrailMap } from '../khatwa/charts'
 import { obstaclesOf, waypointsOf } from './Mountains'
 import { FreedomDots, GuideCard, ToolsPanel, WEIGHT_LABEL, WEIGHT_TONE } from '../khatwa/letgo'
@@ -122,7 +122,7 @@ function WaypointEditor({
   }
 
   return (
-    <Modal onClose={onClose} label={initial ? 'Edit waypoint' : 'Append a waypoint'} width={520}>
+    <Modal onClose={onClose} label={initial ? 'Edit milestone' : 'Add a milestone'} width={520}>
       <form
         className="p-7 flex flex-col gap-5"
         onSubmit={(e) => {
@@ -131,14 +131,14 @@ function WaypointEditor({
         }}
       >
         <div className="flex items-center justify-between">
-          <h2 className="t-h2 m-0">{initial ? 'Edit waypoint' : 'Append a waypoint along the ridge'}</h2>
+          <h2 className="t-h2 m-0">{initial ? 'Edit milestone' : 'Add a milestone'}</h2>
           <IconBtn title="Close" onClick={onClose}>
             <X size={16} />
           </IconBtn>
         </div>
         {error ? <Alert>{error}</Alert> : null}
         <label className="kh-field">
-          <span className="kh-field-label">Waypoint</span>
+          <span className="kh-field-label">Milestone</span>
           <input className="kh-input is-display" autoFocus value={title} placeholder="Finish unit one" onChange={(e) => setTitle(e.target.value)} />
         </label>
         <label className="kh-field">
@@ -151,7 +151,7 @@ function WaypointEditor({
             Cancel
           </Btn>
           <Btn kind="laurel" type="submit" disabled={busy || !title.trim()}>
-            {initial ? 'Save waypoint' : 'Pin waypoint'}
+            {initial ? 'Save milestone' : 'Add milestone'}
           </Btn>
         </div>
       </form>
@@ -165,7 +165,7 @@ function ObstaclesPanel({ goal, closed }: { goal: GoalView; closed: boolean }) {
   const [near, setNear] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const live = goal.milestones.filter((m) => !m.dropped).sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'))
-  const nearLabel = (id: number | null): string => (id === null ? 'on the final climb' : `on the trail before “${live.find((m) => m.id === id)?.title ?? 'a waypoint'}”`)
+  const nearLabel = (id: number | null): string => (id === null ? 'on the final climb' : `on the trail before “${live.find((m) => m.id === id)?.title ?? 'a milestone'}”`)
 
   const save = (obstacles: GoalObstacle[]): void => {
     setError(null)
@@ -177,7 +177,7 @@ function ObstaclesPanel({ goal, closed }: { goal: GoalView; closed: boolean }) {
     <section className="kh-sheet p-6 flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h2 className="t-h2 m-0">What stands in the way</h2>
-        <p className="m-0 t-italic !text-[14.5px]">Name it and it becomes terrain — mist on a stretch of the trail you can plan a way through.</p>
+        <p className="m-0 t-italic !text-[14.5px]">Name what might stop you. It shows on the trail map, so you can plan for it.</p>
       </div>
       {error ? <Alert>{error}</Alert> : null}
       {goal.obstacles.length === 0 ? <span className="text-[14px] text-ink-3">Nothing named yet. Fear of starting, not knowing what to learn next, an evening that keeps getting away — whatever slows this climb.</span> : null}
@@ -198,7 +198,7 @@ function ObstaclesPanel({ goal, closed }: { goal: GoalView; closed: boolean }) {
             </div>
             <input
               className="kh-input !text-[14px] !py-1 !font-serif !italic ml-[30px] !w-[calc(100%-30px)]"
-              placeholder="How I’ll pass it…"
+              placeholder="How I’ll get past it…"
               defaultValue={o.note ?? ''}
               disabled={closed}
               aria-label={`How you will pass ${o.title}`}
@@ -222,11 +222,11 @@ function ObstaclesPanel({ goal, closed }: { goal: GoalView; closed: boolean }) {
           }}
         >
           <label className="kh-field flex-1 min-w-[200px]">
-            <span className="kh-field-label">Something in the way</span>
+            <span className="kh-field-label">What might stop you?</span>
             <input className="kh-input" value={title} placeholder="Fear of starting" onChange={(e) => setTitle(e.target.value)} />
           </label>
           <label className="kh-field">
-            <span className="kh-field-label">Where it lies</span>
+            <span className="kh-field-label">When might it happen?</span>
             <select className="kh-select !w-[220px]" value={near} onChange={(e) => setNear(e.target.value)}>
               {live.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -237,7 +237,7 @@ function ObstaclesPanel({ goal, closed }: { goal: GoalView; closed: boolean }) {
             </select>
           </label>
           <Btn kind="ruled" type="submit" disabled={!title.trim()}>
-            Put it on the map
+            Add to the map
           </Btn>
         </form>
       ) : null}
@@ -277,13 +277,13 @@ export default function MountainDetail({ id }: { id: number }) {
   }
 
   if (loadError) return <Page><LoadError message={loadError} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Reading the ascent log…" /></Page>
+  if (!data) return <Page><Loading label="Loading your mountain…" /></Page>
   const goal = data.goal
   if (!goal) {
     return (
       <Page>
         <div className="kh-empty">
-          <span className="t-h2 text-ink">This mountain is no longer in the folio.</span>
+          <span className="t-h2 text-ink">This mountain no longer exists.</span>
           <Btn kind="ruled" onClick={() => navigate({ name: 'mountains' })}>
             Back to the mountains
           </Btn>
@@ -316,23 +316,23 @@ export default function MountainDetail({ id }: { id: number }) {
       <header className="flex flex-wrap items-end justify-between gap-8 mb-10 pb-8 border-b border-[var(--rule)]">
         <div className="flex flex-col gap-3 min-w-0 max-w-[720px]">
           <Eyebrow>
-            Ascent log · No. {String(goal.id).padStart(2, '0')} <span className="is-quiet">/ {closed ? (goal.status === 'achieved' ? 'Summit reached' : 'Path set aside') : 'Major peak ascent'}</span>
+            Mountain <span className="is-quiet">· {closed ? (goal.status === 'achieved' ? 'goal reached' : 'set aside') : 'in progress'}</span>
           </Eyebrow>
           <h1 className="t-hero !text-[44px] !leading-[52px] m-0 [text-wrap:balance]">{goal.title}</h1>
           {goal.description ? <p className="t-italic m-0 [text-wrap:pretty]">{goal.description}</p> : null}
         </div>
         <div className="kh-sheet flex items-center gap-6 px-6 py-4">
           <div className="flex flex-col">
-            <span className="t-stamp !text-[10.5px] text-ink-4">Ascended</span>
+            <span className="t-stamp !text-[10.5px] text-ink-4">Progress</span>
             <span className="font-serif text-[28px] leading-9 t-num">{Math.round(progress * 100)}%</span>
           </div>
           <div className="w-px self-stretch bg-[var(--rule)]" />
           <div className="flex flex-col">
-            <span className="t-stamp !text-[10.5px] text-ink-4">Horizon target</span>
-            <span className="text-[17px] leading-6">{goal.targetDate ? monthYear(goal.targetDate) : 'Open-ended'}</span>
+            <span className="t-stamp !text-[10.5px] text-ink-4">Target date</span>
+            <span className="text-[17px] leading-6">{goal.targetDate ? monthYear(goal.targetDate) : 'No end date'}</span>
           </div>
           <span className={`font-serif text-[13px] tracking-[0.12em] uppercase px-2 py-1 border-2 border-dashed rounded-md -rotate-6 ${closed ? 'text-laurel border-[var(--laurel)]' : 'text-[var(--ochre-deep)] border-[var(--ochre)]'}`}>
-            {goal.status === 'achieved' ? 'Summit' : goal.status === 'abandoned' ? 'Rested' : `Stage ${roman(Math.max(1, currentIndex + 1))}`}
+            {goal.status === 'achieved' ? 'Reached' : goal.status === 'abandoned' ? 'Paused' : `Step ${Math.max(1, currentIndex + 1)}`}
           </span>
         </div>
       </header>
@@ -348,7 +348,7 @@ export default function MountainDetail({ id }: { id: number }) {
                   <Mountain size={17} /> The trail
                 </h2>
                 <span className="t-caption">
-                  {goal.milestonesDone} of {goal.milestonesTotal} waypoints cleared
+                  {goal.milestonesDone} of {goal.milestonesTotal} milestones reached
                   {goal.obstacles.length ? ` · ${goal.obstacles.filter((o) => !o.passed).length} obstacles ahead` : ''}
                 </span>
               </div>
@@ -365,8 +365,8 @@ export default function MountainDetail({ id }: { id: number }) {
 
           <section className="kh-sheet p-6">
             <div className="flex items-center justify-between gap-4 mb-5">
-              <h2 className="t-h2 m-0">Waypoints &amp; ridge camps</h2>
-              <span className="t-stamp text-ink-4">{closed ? 'Ascent closed' : 'Ascent in progress'}</span>
+              <h2 className="t-h2 m-0">Milestones</h2>
+              <span className="t-stamp text-ink-4">{closed ? 'Closed' : 'In progress'}</span>
             </div>
 
             <ol className="relative flex flex-col gap-3 m-0 p-0 list-none">
@@ -382,7 +382,7 @@ export default function MountainDetail({ id }: { id: number }) {
                     <div className={`flex-1 min-w-0 rounded-[10px] px-4 py-3 ${isCurrent ? 'kh-card ring-1 ring-[var(--ochre-tint)]' : 'bg-[var(--card)] border border-[var(--rule-soft)]'}`}>
                       {isCurrent ? (
                         <div className="flex items-center gap-2 mb-1">
-                          <Stamp tone="ochre-solid" className="!text-[10px]">Current waypoint</Stamp>
+                          <Stamp tone="ochre-solid" className="!text-[10px]">Next milestone</Stamp>
                         </div>
                       ) : null}
                       <div className="flex items-start justify-between gap-3">
@@ -390,10 +390,10 @@ export default function MountainDetail({ id }: { id: number }) {
                         <span className="flex items-center gap-1 shrink-0">
                           {m.date ? <Stamp tone={m.done ? 'laurel' : overdue ? 'ochre' : 'outline'} className="!text-[10.5px]">{dayMonth(m.date)}</Stamp> : null}
                           <span className="opacity-0 group-hover:opacity-100 flex">
-                            <IconBtn title="Edit waypoint" onClick={() => setEditing({ id: m.id, title: m.title, date: m.date })}>
+                            <IconBtn title="Edit milestone" onClick={() => setEditing({ id: m.id, title: m.title, date: m.date })}>
                               <Pencil size={13} />
                             </IconBtn>
-                            <IconBtn title="Set waypoint aside" onClick={() => void run(() => window.api.todo.drop(m.id))}>
+                            <IconBtn title="Set milestone aside" onClick={() => void run(() => window.api.todo.drop(m.id))}>
                               <Trash2 size={13} />
                             </IconBtn>
                           </span>
@@ -401,7 +401,7 @@ export default function MountainDetail({ id }: { id: number }) {
                       </div>
                       {isCurrent && overdue ? (
                         <div className="mt-3 flex items-start gap-2 text-[13px] text-[var(--ochre-deep)]">
-                          <TriangleAlert size={14} className="mt-0.5 shrink-0" /> This waypoint was due {plural(daysBetween(m.date!, now), 'day')} ago. Re-date it honestly rather than let it linger.
+                          <TriangleAlert size={14} className="mt-0.5 shrink-0" /> This milestone was due {plural(daysBetween(m.date!, now), 'day')} ago. Give it a new date.
                         </div>
                       ) : null}
                     </div>
@@ -426,7 +426,7 @@ export default function MountainDetail({ id }: { id: number }) {
 
             {!closed ? (
               <button className="mt-5 w-full kh-docket py-3 flex items-center justify-center gap-2 text-[14px] hover:bg-[var(--rule-soft)]" onClick={() => setEditing('new')}>
-                <Plus size={15} /> Append a waypoint along the ridge
+                <Plus size={15} /> Add a milestone
               </button>
             ) : null}
           </section>
@@ -437,7 +437,7 @@ export default function MountainDetail({ id }: { id: number }) {
         <aside className="flex flex-col gap-6 min-w-0">
           <section className="kh-sheet p-5 flex flex-col gap-3">
             <div className="flex items-baseline justify-between">
-              <h2 className="t-h3 m-0">Contributing habits &amp; daily rhythms</h2>
+              <h2 className="t-h3 m-0">Habits for this mountain</h2>
               <span className="t-stamp !text-[10.5px] text-ink-4">This week</span>
             </div>
             {goalHabits.length === 0 ? <span className="t-caption">No habits are tied to this mountain.</span> : null}
@@ -448,7 +448,7 @@ export default function MountainDetail({ id }: { id: number }) {
 
           {goal.mindMap.length > 0 ? (
             <section className="kh-sheet p-5 flex flex-col gap-3">
-              <h2 className="t-h3 m-0">The cartographer’s sketch</h2>
+              <h2 className="t-h3 m-0">Topic map</h2>
               <div className="rounded-lg overflow-hidden bg-[var(--card)]">
                 <MindMap nodes={goal.mindMap} height={240} />
               </div>
@@ -494,17 +494,17 @@ export default function MountainDetail({ id }: { id: number }) {
       <section className="mt-12">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-[var(--ochre-deep)]">The ascent &amp; pack ledger</span>
-            <h2 className="t-h1 !text-[28px] m-0">What carries you up, and what weighs you down</h2>
+            <span className="t-stamp text-[var(--ochre-deep)]">Helps and burdens</span>
+            <h2 className="t-h1 !text-[28px] m-0">What helps you, and what holds you back</h2>
           </div>
-          <span className="t-italic !text-[13px]">The mountain stays the same. The pack is yours to lighten.</span>
+          <span className="t-italic !text-[13px]">You can’t change the mountain, but you can lighten your backpack.</span>
         </div>
         <div className="grid gap-6 min-[1100px]:grid-cols-2">
           <div className="kh-sheet p-6 flex flex-col gap-5">
-            <ToolsPanel tools={data.tools} goals={data.goals} goalId={goal.id} title="What carries you upward" />
+            <ToolsPanel tools={data.tools} goals={data.goals} goalId={goal.id} title="What helps you" />
             {goalHabits.filter((h) => h.active).length ? (
               <div className="flex flex-col gap-2 pt-4 border-t border-[var(--rule)]">
-                <span className="t-stamp !text-[10.5px] text-ink-3">Upward rhythms</span>
+                <span className="t-stamp !text-[10.5px] text-ink-3">Helpful habits</span>
                 {goalHabits
                   .filter((h) => h.active)
                   .map((h) => {
@@ -532,7 +532,7 @@ export default function MountainDetail({ id }: { id: number }) {
               carried.map((l) => (
                 <button key={l.id} className="kh-card p-4 flex flex-col gap-3 text-left hover:border-[var(--rule)]" onClick={() => navigate({ name: 'letgo', id: l.id })}>
                   <span className="flex items-center justify-between gap-2">
-                    <Stamp tone={WEIGHT_TONE[l.weight]} className="!text-[10px]">{l.status === 'left_behind' ? 'Left at the cairn' : WEIGHT_LABEL[l.weight]}</Stamp>
+                    <Stamp tone={WEIGHT_TONE[l.weight]} className="!text-[10px]">{l.status === 'left_behind' ? 'Left behind' : WEIGHT_LABEL[l.weight]}</Stamp>
                     <span className="t-caption">
                       {l.stats.daysFree}/{l.stats.daysTracked} days free{l.stats.daysTracked ? ` · ${Math.round(l.stats.freedomRate * 100)}%` : ''}
                     </span>
@@ -563,16 +563,16 @@ export default function MountainDetail({ id }: { id: number }) {
           </span>
         </span>
         {closed ? (
-          <Btn kind="ruled" onClick={() => void run(() => window.api.goals.reopen(goal.id), 'The ascent is open again — its habits are back in rhythm.')}>
-            <RotateCcw size={15} /> Reopen this ascent
+          <Btn kind="ruled" onClick={() => void run(() => window.api.goals.reopen(goal.id), 'The mountain is open again, and its habits are back on your schedule.')}>
+            <RotateCcw size={15} /> Reopen this mountain
           </Btn>
         ) : (
           <>
-            <Btn kind="soft" onClick={() => void run(() => window.api.goals.close(goal.id, 'abandoned'), 'Path set aside. Its habits are paused; their history is kept.')}>
-              Set this path aside
+            <Btn kind="soft" onClick={() => void run(() => window.api.goals.close(goal.id, 'abandoned'), 'Mountain paused. Its habits are paused, and their history is kept.')}>
+              Pause this mountain
             </Btn>
-            <Btn kind="laurel" onClick={() => void run(() => window.api.goals.close(goal.id, 'achieved'), 'Summit reached. The seal is pressed.')}>
-              <Flag size={15} /> Mark the summit reached
+            <Btn kind="laurel" onClick={() => void run(() => window.api.goals.close(goal.id, 'achieved'), 'Goal reached. Well done!')}>
+              <Flag size={15} /> Mark the goal reached
             </Btn>
           </>
         )}
@@ -588,7 +588,7 @@ export default function MountainDetail({ id }: { id: number }) {
           <div className="p-7 flex flex-col gap-4">
             <h2 className="t-h2 m-0">Delete “{goal.title}”?</h2>
             <p className="m-0 text-ink-2 [text-wrap:pretty]">
-              The mountain and its map are removed. Its habits and waypoints stay in your folio with their full history — they simply stop belonging to this mountain.
+              The mountain and its map are removed. Its habits and milestones stay, with their full history. They just stop belonging to this mountain.
             </p>
             <div className="flex justify-end gap-3">
               <Btn kind="soft" onClick={() => setConfirmDelete(false)}>

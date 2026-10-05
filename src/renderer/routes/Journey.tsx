@@ -71,20 +71,20 @@ function FolioCard({ folio, index, onOpen, rotate, cover }: { folio: MonthFolio;
     <button className="kh-card relative p-5 pt-6 text-left flex flex-col gap-2 hover:shadow-[var(--shadow-float)] transition-shadow" style={{ transform: `rotate(${rotate}deg)` }} onClick={onOpen}>
       <span className="kh-pin" />
       <div className="flex justify-between items-baseline">
-        <span className="t-stamp !text-[10.5px] text-ink-3">Folio N° {index}</span>
-        <span className="t-italic !text-[12px]">Archived</span>
+        <span className="t-stamp !text-[10.5px] text-ink-3">Month {index}</span>
+        <span className="t-italic !text-[12px]">Past month</span>
       </div>
       {cover ? <img src={cover.url} alt={cover.caption ?? ''} className="w-full aspect-[16/9] object-cover rounded-[3px] mt-1" draggable={false} /> : null}
       <span className="font-serif text-[22px] leading-7">{folio.label}</span>
       <span className="font-serif italic text-[13.5px] text-[var(--ochre-deep)]">
-        {folio.completed ? `${plural(folio.completed, 'step')} kept of ${folio.scheduled}` : 'A quiet month on the trail'}
+        {folio.completed ? `${folio.completed} of ${folio.scheduled} habits done` : 'A quiet month'}
       </span>
       <div className="flex justify-between t-caption mt-2">
         <span className="flex items-center gap-1.5">
           <Clock size={12} /> {duration(folio.minutes)} logged
         </span>
         <span className="flex items-center gap-1.5">
-          <Flag size={12} /> {plural(folio.milestones.length, 'waypoint')}
+          <Flag size={12} /> {plural(folio.milestones.length, 'milestone')}
         </span>
       </div>
     </button>
@@ -182,7 +182,7 @@ export default function Journey() {
   }, [selected])
 
   if (error) return <Page><LoadError message={error} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Pinning the month’s folios to the wall…" /></Page>
+  if (!data) return <Page><Loading label="Loading your months…" /></Page>
 
   const folios = data.folios
   const photosOf = (ym: string): Attachment[] => data.journal.filter((e) => e.date.startsWith(ym)).flatMap((e) => e.attachments.filter((a) => a.isImage).map((a) => ({ ...a, caption: a.caption ?? e.title })))
@@ -269,15 +269,15 @@ export default function Journey() {
       >
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-[var(--ochre-deep)]">Wall of continuity &amp; evidence</span>
-            <span className="t-italic !text-[13.5px]">“We are what we pay attention to.” — the folio keeps the record so memory does not have to</span>
+            <span className="t-stamp text-[var(--ochre-deep)]">Your months</span>
+            <span className="t-italic !text-[13.5px]">Each card is a month. Pick one to see what happened.</span>
           </div>
           <span className="flex items-center gap-4 t-caption">
             <span className="flex items-center gap-1.5">
-              <Dot /> Brass pin: a month
+              <Dot /> Pin: a month
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-4 h-2 bg-[var(--docket)] inline-block" /> Tape: a keepsake
+              <span className="w-4 h-2 bg-[var(--docket)] inline-block" /> Tape: a photo or memory
             </span>
           </span>
         </div>
@@ -307,27 +307,27 @@ export default function Journey() {
             <article className="kh-card kh-tape relative px-8 pt-9 pb-7 flex flex-col gap-6 min-w-0">
               <div className="flex flex-col gap-2">
                 <span className="t-stamp text-ink-3">
-                  Folio N° {index(current.ym)} · Monthly synthesis {current.ym === months[0] ? <span className="text-laurel">· in progress</span> : null}
+                  Month {index(current.ym)} · Summary {current.ym === months[0] ? <span className="text-laurel">· in progress</span> : null}
                 </span>
                 <h1 className="t-hero !text-[54px] !leading-[58px] m-0">{current.label}</h1>
                 <span className="font-serif italic text-[16px] text-[var(--ochre-deep)]">
-                  {current.completed ? `The month of ${plural(current.completed, 'kept step')}` : 'A quiet month on the trail'}
+                  {current.completed ? `${plural(current.completed, 'habit')} done this month` : 'A quiet month'}
                 </span>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="kh-docket p-4 flex flex-col">
-                  <span className="t-stamp !text-[10px] text-ink-4">Tally of the vow</span>
+                  <span className="t-stamp !text-[10px] text-ink-4">Time spent</span>
                   <span className="font-serif text-[28px] leading-9">{duration(current.minutes)}</span>
-                  <span className="t-caption">deliberate practice</span>
+                  <span className="t-caption">on your habits</span>
                 </div>
                 <div className="kh-docket p-4 flex flex-col">
-                  <span className="t-stamp !text-[10px] text-ink-4">Steps kept</span>
+                  <span className="t-stamp !text-[10px] text-ink-4">Habits done</span>
                   <span className="font-serif text-[28px] leading-9">{current.completed}</span>
                   <span className="t-caption">{rate === null ? 'nothing scheduled' : `${rate}% of ${current.scheduled}`}</span>
                 </div>
                 <div className="kh-docket p-4 flex flex-col">
-                  <span className="t-stamp !text-[10px] text-ink-4">Points pressed</span>
+                  <span className="t-stamp !text-[10px] text-ink-4">Points</span>
                   <span className="font-serif text-[28px] leading-9">{current.points}</span>
                   <span className="t-caption">{current.bestDay ? `best: ${dayMonth(current.bestDay.date)}` : '—'}</span>
                 </div>
@@ -335,10 +335,10 @@ export default function Journey() {
 
               <div className="flex flex-col gap-3">
                 <span className="t-stamp text-laurel flex items-center gap-2">
-                  <Sparkles size={14} /> Breakthroughs
+                  <Sparkles size={14} /> Highlights
                 </span>
                 {current.milestones.length === 0 && current.summits.length === 0 && current.seals.length === 0 ? (
-                  <p className="t-italic m-0">No waypoint was cleared this month — the trail still counts every step.</p>
+                  <p className="t-italic m-0">No milestones reached this month. Every habit you did still counts.</p>
                 ) : null}
                 {current.summits.map((g) => (
                   <p key={`s${g.id}`} className="m-0 text-[15.5px] leading-6">
@@ -356,18 +356,18 @@ export default function Journey() {
                 ))}
                 {current.seals.map((a) => (
                   <p key={a.key} className="m-0 text-[15.5px] leading-6 flex items-center gap-2">
-                    <Award size={14} className="text-[var(--ochre-deep)]" /> Seal pressed: {a.name}
+                    <Award size={14} className="text-[var(--ochre-deep)]" /> Achievement earned: {a.name}
                   </p>
                 ))}
               </div>
 
               <div className="flex flex-col gap-2">
                 <span className="t-stamp text-[var(--ochre-deep)] flex items-center gap-2">
-                  <TriangleAlert size={14} /> The resistance encountered
+                  <TriangleAlert size={14} /> What was hardest
                 </span>
                 <p className="m-0 font-serif text-[17px] leading-[26px] text-ink-2 [text-wrap:pretty]">
                   {resistance
-                    ? `${resistance[0]} slipped ${plural(resistance[1], 'time')} this month — the rhythm that met the most friction. Worth asking what stood in its way.`
+                    ? `${resistance[0]} slipped ${plural(resistance[1], 'time')} this month, more than any other habit. Worth asking what got in the way.`
                     : 'No step was missed outright this month. Friction was met and passed.'}
                 </p>
               </div>
@@ -382,7 +382,7 @@ export default function Journey() {
                       <ImagePlus size={13} /> {pinning ? 'Pinning…' : 'Pin a photo'}
                     </Btn>
                     <Btn kind="ghost" onClick={() => setEditingMonth(current.ym)}>
-                      <Pencil size={13} /> {memory ? 'Revise the page' : 'Write the month’s page'}
+                      <Pencil size={13} /> {memory ? 'Edit' : 'Write about this month'}
                     </Btn>
                   </span>
                 </div>
@@ -408,7 +408,7 @@ export default function Journey() {
                   {leftBehind.map(({ l, free, tracked, setDown }) => (
                     <p key={l.id} className="m-0 text-[15.5px] leading-6">
                       <b className="font-semibold">{l.title}</b>
-                      <span className="text-ink-3"> · {free} / {tracked} days free{setDown ? ' · set down at the cairn this month' : ''}</span>
+                      <span className="text-ink-3"> · {free} / {tracked} days free{setDown ? ' · left behind this month' : ''}</span>
                     </p>
                   ))}
                   {memory?.prompts.learned ? <p className="m-0 font-serif italic text-[16px] text-ink-2">“{memory.prompts.learned}”</p> : null}
@@ -420,10 +420,10 @@ export default function Journey() {
                   <Footprints size={13} /> {current.completed}/{current.scheduled} rituals
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Flag size={13} /> {plural(current.milestones.length, 'waypoint')} cleared
+                  <Flag size={13} /> {plural(current.milestones.length, 'milestone')} reached
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Award size={13} /> {plural(current.seals.length, 'seal')} pressed
+                  <Award size={13} /> {plural(current.seals.length, 'achievement')} earned
                 </span>
               </div>
             </article>
@@ -445,8 +445,8 @@ export default function Journey() {
               {artifacts.length === 0 && current.seals.length === 0 && fragments.length === 0 ? (
                 <div className="kh-card relative p-5 pt-6 -rotate-1 flex flex-col gap-3">
                   <span className="kh-pin" />
-                  <span className="t-stamp text-ink-3">Keepsakes</span>
-                  <p className="t-italic !text-[14px] m-0">Your wall is waiting for its first memory — journal entries, summits and seals from this month are pinned here.</p>
+                  <span className="t-stamp text-ink-3">Memories</span>
+                  <p className="t-italic !text-[14px] m-0">Nothing here yet. Journal entries, photos, reached goals and achievements from this month appear here.</p>
                   <Btn kind="soft" size="sm" onClick={() => navigate({ name: 'journal' })}>
                     Add a memory
                   </Btn>
@@ -455,11 +455,11 @@ export default function Journey() {
               {artifacts.map(({ kind, g }, i) => (
                 <button key={`${kind}${g.id}`} className="kh-docket relative p-5 text-left flex flex-col gap-2 shadow-[var(--shadow-rest)] kh-tape" style={{ transform: `rotate(${i % 2 ? 1 : -1.5}deg)` }} onClick={() => navigate({ name: 'mountain', id: g.id })}>
                   <div className="flex justify-between items-baseline">
-                    <span className="t-stamp !text-[10.5px] text-ink-3">{kind === 'summit' ? 'Summit · ticket' : 'Expedition · ticket'}</span>
+                    <span className="t-stamp !text-[10.5px] text-ink-3">{kind === 'summit' ? 'Goal reached' : 'Goal started'}</span>
                     <span className="t-caption">{dayMonth((kind === 'summit' ? g.closedAt! : g.createdAt).slice(0, 10))}</span>
                   </div>
                   <span className="flex items-center gap-2 text-[13px] text-ink-3">
-                    <Mountain size={13} /> {kind === 'summit' ? 'Base camp → the peak' : 'Base camp → first waypoint'}
+                    <Mountain size={13} /> {kind === 'summit' ? 'You reached the top' : 'You set a new goal'}
                   </span>
                   <span className="bg-[var(--card)] rounded-lg px-4 py-3 font-serif text-[18px] leading-6 [text-wrap:balance]">{g.title}</span>
                 </button>
@@ -483,10 +483,10 @@ export default function Journey() {
 
       <footer className="flex flex-wrap items-center gap-4 mt-5 t-caption !text-[12.5px]">
         <span className="flex items-center gap-2">
-          <Dot tone="laurel" /> <b className="text-ink font-semibold">Active board: the last {MONTHS} months</b>
+          <Dot tone="laurel" /> <b className="text-ink font-semibold">The last {MONTHS} months</b>
         </span>
         <span>
-          {plural(folios.length, 'folio')} · {plural(totals.keepsakes, 'keepsake')} pinned · {duration(totals.minutes)} chronicled
+          {plural(folios.length, 'month')} · {plural(totals.keepsakes, 'highlight')} · {duration(totals.minutes)} on habits
         </span>
         <span className="ml-auto italic font-serif">Since {dayMonth(addDays(`${months[months.length - 1]!}-01`, 0))}</span>
       </footer>

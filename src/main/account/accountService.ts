@@ -1,3 +1,5 @@
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import type { AccountStatus, AccountUser } from '@shared/types'
 
 /**
@@ -8,10 +10,23 @@ import type { AccountStatus, AccountUser } from '@shared/types'
  * session cookie it is given (encrypted at rest, never handed to the UI process) and sends
  * it back on each request. The renderer only ever sees who is signed in.
  *
- * Google sign-in: the app gets a Google ID token through its own browser-based sign-in
- * and hands it to Neon Auth, which verifies it with Google. The ID token's audience is the
- * app's Google client, so Neon Auth's Google provider must be configured with that client.
+ * Google sign-in follows Neon's own redirect flow, with the system browser standing in for
+ * a web page: the app listens on a localhost port, asks Neon to start Google sign-in with
+ * that address as the callback, and opens the link. Neon sends the browser back with a
+ * one-time `neon_auth_session_verifier`, which the app exchanges for the session — together
+ * with the "session challenge" cookie Neon set when sign-in started, so a verifier is no
+ * use to anyone but the app that asked for it.
  */
+
+/** Neon trusts any localhost origin, on any port, out of the box. */
+const LOCAL_ORIGIN = 'http://localhost'
+const GOOGLE_TIMEOUT_MS = 5 * 60_000
+const VERIFIER_PARAM = 'neon_auth_session_verifier'
+
+const donePage = (ok: boolean): string => `<!doctype html><meta charset="utf-8"><title>Khatwa</title>
+<style>body{margin:0;height:100vh;display:grid;place-items:center;background:#fbf8f3;color:#24211d;font-family:Georgia,serif}
+.c{text-align:center;padding:40px 48px;border:1px solid #e3dacb;border-radius:12px;background:#fdfaf6}h1{font-size:22px;font-weight:500;margin:0 0 8px}p{margin:0;color:#6f675e;font-family:system-ui,sans-serif;font-size:14px}</style>
+<div class="c"><h1>${ok ? 'You are signed in to Khatwa' : 'Sign-in did not finish'}</h1><p>${ok ? 'You can close this tab and go back to the app.' : 'Close this tab and try again from the app.'}</p></div>`
 
 export class AccountError extends Error {
   constructor(
@@ -36,7 +51,8 @@ export function accountService(deps: {
   /** Sent as the Origin header — must be one of Neon Auth's trusted domains, if it checks. */
   origin?: string | null
   store: SessionStore
-  googleIdToken: () => Promise<string>
+  /** Opens a link in the system browser. */
+  openExternal: (url: string) => void | Promise<void>
   fetchImpl?: FetchLike
 }) {
   const doFetch: FetchLike = deps.fetchImpl ?? fetch
@@ -60,9 +76,9 @@ export function accountService(deps: {
     return (base = root)
   }
 
-  function headers(extra: Record<string, string> = {}): Record<string, string> {
+  function headers(extra: Record<string, string> = {}, origin = deps.origin || LOCAL_ORIGIN): Record<string, string> {
     const h: Record<string, string> = { accept: 'application/json', ...extra }
-    if (deps.origin) h.origin = deps.origin
+    h.origin = origin
     const cookie = deps.store.load()
     if (cookie) h.cookie = cookie
     return h
@@ -90,13 +106,13 @@ export function accountService(deps: {
     deps.store.save(jar.size ? [...jar].map(([k, v]) => `${k}=${v}`).join('; ') : null)
   }
 
-  async function call<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  async function call<T>(path: string, init: { method?: string; body?: unknown; origin?: string } = {}): Promise<T> {
     const root = await resolveBase()
     let res: Response
     try {
       res = await doFetch(`${root}${path}`, {
         method: init.method ?? 'GET',
-        headers: headers(init.body !== undefined ? { 'content-type': 'application/json' } : {}),
+        headers: headers(init.body !== undefined ? { 'content-type': 'application/json' } : {}, init.origin),
         body: init.body !== undefined ? JSON.stringify(init.body) : undefined
       })
     } catch {
@@ -133,6 +149,69 @@ export function accountService(deps: {
     }
     if (status === 429) return new AccountError('Too many attempts. Wait a minute and try again.', 'other')
     return new AccountError(message ? `The account service said: ${message}` : `The account service failed (${status}).`, 'other')
+  }
+
+  let cancelGoogle: (() => void) | null = null
+
+  /**
+   * A one-shot listener for Neon's redirect back from Google. It answers on both IPv4 and
+   * IPv6 loopback, because a browser may resolve "localhost" to either, and never on the
+   * network.
+   */
+  async function listenForVerifier(): Promise<{ port: number; verifier: Promise<string>; close: () => void }> {
+    const servers: Server[] = []
+    let settle: { resolve: (v: string) => void; reject: (e: Error) => void } | null = null
+    const verifier = new Promise<string>((resolve, reject) => {
+      settle = { resolve, reject }
+    })
+    // Rejections are delivered to the awaiting caller; never leave one unhandled.
+    verifier.catch(() => undefined)
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const close = (): void => {
+      for (const s of servers) s.close()
+      if (timer) clearTimeout(timer)
+      if (cancelGoogle === cancel) cancelGoogle = null
+    }
+    const cancel = (): void => {
+      settle?.reject(new AccountError('Google sign-in was cancelled.', 'other'))
+      close()
+    }
+    const handler = (req: IncomingMessage, res: ServerResponse): void => {
+      const url = new URL(req.url ?? '/', 'http://localhost')
+      if (url.pathname !== '/done') {
+        res.writeHead(404).end()
+        return
+      }
+      const code = url.searchParams.get(VERIFIER_PARAM)
+      res.writeHead(code ? 200 : 400, { 'content-type': 'text/html; charset=utf-8' }).end(donePage(Boolean(code)))
+      const why = url.searchParams.get('error')
+      if (code) settle?.resolve(code)
+      else settle?.reject(new AccountError(`Google sign-in did not finish${why ? ` (${why})` : ''}. Try again.`, 'other'))
+    }
+
+    const first = createServer(handler)
+    await new Promise<void>((resolve, reject) => {
+      first.once('error', reject)
+      first.listen(0, '127.0.0.1', () => resolve())
+    })
+    servers.push(first)
+    const port = (first.address() as AddressInfo).port
+    const second = createServer(handler)
+    await new Promise<void>((resolve) => {
+      second.once('error', () => resolve()) // no IPv6 loopback here: IPv4 alone will do
+      second.listen(port, '::1', () => {
+        servers.push(second)
+        resolve()
+      })
+    })
+
+    timer = setTimeout(() => {
+      settle?.reject(new AccountError('Google sign-in timed out. Try again.', 'other'))
+      close()
+    }, GOOGLE_TIMEOUT_MS)
+    timer.unref?.()
+    cancelGoogle = cancel
+    return { port, verifier, close }
   }
 
   function toUser(u: { id: string; email: string; name?: string | null; image?: string | null } | undefined | null): AccountUser | null {
@@ -180,14 +259,25 @@ export function accountService(deps: {
 
     async signInWithGoogle(): Promise<AccountUser> {
       if (!deps.authUrl) throw new AccountError('Accounts are not set up in this build.', 'not_configured')
-      const token = await deps.googleIdToken()
-      const r = await call<{ user?: AccountUser; redirect?: boolean }>('/sign-in/social', {
-        method: 'POST',
-        body: { provider: 'google', idToken: { token } }
-      })
-      const user = toUser(r.user)
-      if (!user) throw new AccountError('Google sign-in did not complete. Try again.', 'other')
-      return (cached = user)
+      cancelGoogle?.()
+      const back = await listenForVerifier()
+      try {
+        const origin = `http://localhost:${back.port}`
+        const r = await call<{ url?: string }>('/sign-in/social', {
+          method: 'POST',
+          body: { provider: 'google', callbackURL: `${origin}/done`, errorCallbackURL: `${origin}/done` },
+          origin
+        })
+        if (!r.url) throw new AccountError('Google sign-in could not start. Try again.', 'other')
+        await deps.openExternal(r.url)
+        const verifier = await back.verifier
+        const session = await call<{ user?: AccountUser } | null>(`/get-session?${VERIFIER_PARAM}=${encodeURIComponent(verifier)}`, { origin })
+        const user = toUser(session?.user)
+        if (!user) throw new AccountError('Google sign-in did not complete. Try again.', 'other')
+        return (cached = user)
+      } finally {
+        back.close()
+      }
     },
 
     async signOut(): Promise<void> {

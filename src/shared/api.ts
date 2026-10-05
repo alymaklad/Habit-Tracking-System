@@ -2,6 +2,9 @@ import type {
   AchievementView,
   AiProvider,
   AccountStatus,
+  LetGoDraftResult,
+  LetGoPlan,
+  LetGoPlanInput,
   AccountUser,
   AiStatus,
   AppSettings,
@@ -153,6 +156,12 @@ export interface HabitApi {
     reopen(id: number): Promise<void>
     updatePlan(id: number, patch: { mindMap?: MindMapNode[]; resources?: GoalResource[]; obstacles?: GoalObstacle[] }): Promise<void>
     remove(id: number): Promise<void>
+  }
+
+  /** Planning, with the AI planner, how to let a habit go. */
+  letGoPlan: {
+    draft(input: LetGoPlanInput): Promise<LetGoDraftResult>
+    save(input: LetGoPlanInput, plan: LetGoPlan): Promise<LetGoView>
   }
 
   account: {

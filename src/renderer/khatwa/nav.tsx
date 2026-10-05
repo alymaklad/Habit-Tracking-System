@@ -17,6 +17,7 @@ export type Route =
   | { name: 'achievements' }
   | { name: 'letgo'; id?: number; create?: boolean }
   | { name: 'ceremony'; id: number }
+  | { name: 'letgoPlan' }
   | { name: 'journal'; prompt?: string; goalId?: number | null; letGoId?: number | null; kind?: 'free' | 'daily' | 'deep' }
   | { name: 'settings' }
 
@@ -26,28 +27,29 @@ export type RouteName = Route['name']
 export function railKey(route: Route): RouteName {
   if (route.name === 'mountain' || route.name === 'expedition') return 'mountains'
   if (route.name === 'habit') return 'habits'
-  if (route.name === 'ceremony') return 'letgo'
+  if (route.name === 'ceremony' || route.name === 'letgoPlan') return 'letgo'
   return route.name
 }
 
 export const CRUMBS: Record<RouteName, [string, string]> = {
-  today: ['Field folio & records', 'Today'],
-  journey: ['Field folio & records', 'Journey'],
-  mountains: ['Field folio & records', 'The Mountains'],
+  today: ['Main', 'Today'],
+  journey: ['Main', 'Journey'],
+  mountains: ['Main', 'Mountains'],
   mountain: ['The Mountains', 'Trail detail'],
-  expedition: ['Field folio & records', 'New expedition'],
-  me: ['Desk / current folio', 'Me'],
-  habits: ['Desk / current folio', 'Habits'],
-  habit: ['Habits', 'Rhythm detail'],
-  todo: ['Desk / current folio', 'To-do'],
-  calendar: ['Desk / current folio', 'Calendar'],
-  progress: ['Desk / current folio', 'Progress'],
-  review: ['Desk / current folio', 'Weekly review'],
-  achievements: ['Desk / current folio', 'Achievements'],
-  letgo: ['Inner work', 'Let go · the backpack'],
-  ceremony: ['Let go', 'Leave-behind ceremony'],
-  journal: ['Inner work', 'Journal · the inner compass'],
-  settings: ['Desk / current folio', 'Settings']
+  expedition: ['Mountains', 'New mountain'],
+  me: ['Main', 'Me'],
+  habits: ['Habits & progress', 'Habits'],
+  habit: ['Habits', 'Habit details'],
+  todo: ['Habits & progress', 'To-do'],
+  calendar: ['Habits & progress', 'Calendar'],
+  progress: ['Habits & progress', 'Progress'],
+  review: ['Habits & progress', 'Weekly review'],
+  achievements: ['Habits & progress', 'Achievements'],
+  letgo: ['Reflection', 'Let Go'],
+  letgoPlan: ['Let Go', 'Plan to let go'],
+  ceremony: ['Let Go', 'Leaving it behind'],
+  journal: ['Reflection', 'Journal'],
+  settings: ['Settings', 'Settings']
 }
 
 export interface Shell {
@@ -67,6 +69,8 @@ export interface Shell {
    */
   requireAccount: (reason: string, detail?: string, startWith?: 'sign-in' | 'sign-up') => Promise<boolean>
   signOut: () => Promise<void>
+  /** Shows the first-time tour again. */
+  startTour: () => void
 }
 
 export const ShellContext = createContext<Shell | null>(null)

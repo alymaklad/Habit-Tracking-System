@@ -126,6 +126,11 @@ const api: HabitApi = {
     remove: (id) => invoke('goals:remove', id)
   },
 
+  letGoPlan: {
+    draft: (input) => invoke('letGoPlan:draft', input),
+    save: (input, plan) => invoke('letGoPlan:save', input, plan)
+  },
+
   account: {
     status: () => invoke('account:status'),
     signUp: (name, email, password) => invoke('account:signUp', name, email, password),

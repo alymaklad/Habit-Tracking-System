@@ -6,7 +6,7 @@ import { addDays } from '../lib/format'
 import { longDate, plural, time12, today } from '../lib/khatwa'
 import { useShell } from '../khatwa/nav'
 import { Page, PageHead } from '../khatwa/Page'
-import { Alert, Btn, CheckBox, Dot, IconBtn, LoadError, Loading, Stamp } from '../khatwa/ui'
+import { Alert, Btn, CheckBox, IconBtn, LoadError, Loading, Stamp } from '../khatwa/ui'
 
 function ItemRow({ item, run, anchor }: { item: TodoItem; run: (fn: () => Promise<unknown>) => void; anchor: string }) {
   const [editing, setEditing] = useState(false)
@@ -82,11 +82,6 @@ export default function Todo() {
   return (
     <Page narrow>
       <PageHead
-        eyebrow={
-          <>
-            To-do <Dot /> <span className="is-quiet">Manual items carry forward · habit steps complete their habit</span>
-          </>
-        }
         title={anchor === today() ? 'Today’s list' : longDate(anchor)}
         aside={
           <div className="flex items-center gap-2">

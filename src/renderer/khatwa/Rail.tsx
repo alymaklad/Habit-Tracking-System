@@ -53,7 +53,7 @@ const INNER: Item[] = [
 function NavButton({ item, index, active, onClick }: { item: Item; index?: number; active: boolean; onClick: () => void }) {
   const Icon = item.icon
   return (
-    <button className={`kh-nav-item ${item.sub ? 'is-core' : ''} ${active ? 'is-active' : ''}`} onClick={onClick} aria-current={active ? 'page' : undefined}>
+    <button className={`kh-nav-item ${item.sub ? 'is-core' : ''} ${active ? 'is-active' : ''}`} onClick={onClick} aria-current={active ? 'page' : undefined} data-tour={`nav-${item.key}`}>
       <Icon size={18} strokeWidth={1.7} className="shrink-0" />
       <span className="kh-nav-text">
         <span className="kh-nav-title">{item.title}</span>
@@ -67,7 +67,7 @@ function NavButton({ item, index, active, onClick }: { item: Item; index?: numbe
 function SyncLine({ status, onOpen }: { status: SyncStatus | null; onOpen: () => void }) {
   useTick(30_000)
   let icon: ReactNode = <CloudOff size={14} />
-  let text = 'Kept offline, on this desk'
+  let text = 'Not synced: saved on this computer'
   let tone = 'text-ink-3'
   if (status) {
     if (status.state === 'needs_reauth') {
@@ -112,7 +112,7 @@ export default function Rail({
   onOpenSync: () => void
 }) {
   return (
-    <aside className="kh-rail">
+    <aside className="kh-rail" data-tour="sidebar">
       <div className="kh-brand">
         <img className="kh-brand-emblem" src={emblem} alt="" />
         <div className="min-w-0">
@@ -124,27 +124,27 @@ export default function Rail({
         </div>
       </div>
 
-      <div className="kh-nav-group">
-        <div className="kh-nav-heading">Core paths</div>
-        <nav className="kh-nav" aria-label="Core paths">
+      <div className="kh-nav-group" data-tour="group-main">
+        <div className="kh-nav-heading">Main</div>
+        <nav className="kh-nav" aria-label="Main">
           {CORE.map((item, i) => (
             <NavButton key={item.key} item={item} index={i} active={active === item.key} onClick={() => onNavigate(item.key)} />
           ))}
         </nav>
       </div>
 
-      <div className="kh-nav-group">
-        <div className="kh-nav-heading">Rhythms &amp; folio</div>
-        <nav className="kh-nav" aria-label="Folio records">
+      <div className="kh-nav-group" data-tour="group-habits">
+        <div className="kh-nav-heading">Habits &amp; progress</div>
+        <nav className="kh-nav" aria-label="Habits and progress">
           {FOLIO.map((item) => (
             <NavButton key={item.key} item={item} active={active === item.key} onClick={() => onNavigate(item.key)} />
           ))}
         </nav>
       </div>
 
-      <div className="kh-nav-group">
-        <div className="kh-nav-heading">Inner work</div>
-        <nav className="kh-nav" aria-label="Inner work">
+      <div className="kh-nav-group" data-tour="group-reflection">
+        <div className="kh-nav-heading">Reflection</div>
+        <nav className="kh-nav" aria-label="Reflection">
           {INNER.map((item) => (
             <NavButton key={item.key} item={item} active={active === item.key} onClick={() => onNavigate(item.key)} />
           ))}
@@ -158,7 +158,7 @@ export default function Rail({
         <button className="kh-profile" onClick={() => onNavigate('me')}>
           <span className="kh-monogram">{initial(displayName)}</span>
           <span className="flex flex-col min-w-0 flex-1">
-            <span className="text-[14px] font-semibold leading-5 truncate">{displayName.trim() || 'Your folio'}</span>
+            <span className="text-[14px] font-semibold leading-5 truncate">{displayName.trim() || 'You'}</span>
             <span className="font-serif italic text-[12.5px] leading-4 text-ink-3 truncate">
               {level ? `Level ${level.level} · ${level.title}` : 'Setting out'}
             </span>

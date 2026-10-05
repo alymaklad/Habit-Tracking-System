@@ -10,9 +10,11 @@ import {
 import {
   CritiqueSchema,
   GoalPlanSchema,
+  LetGoPlanSchema,
   RelevanceSchema,
   type Critique,
-  type RawGoalPlan
+  type RawGoalPlan,
+  type RawLetGoPlan
 } from './goalPlanSchema'
 
 const BASE = 'https://api.groq.com/openai/v1'
@@ -367,6 +369,10 @@ export function groqClient(opts: {
 
     finalize(prompt): Promise<RawGoalPlan> {
       return structured(prompt, GoalPlanSchema, 'goal_plan', MAX_OUTPUT.plan)
+    },
+
+    finalizeLetGo(prompt): Promise<RawLetGoPlan> {
+      return structured(prompt, LetGoPlanSchema, 'letgo_plan', MAX_OUTPUT.plan)
     },
 
     critique(prompt): Promise<Critique> {

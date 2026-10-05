@@ -2,10 +2,11 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import {
   CritiqueSchema,
-  GoalPlanSchema,
+  GoalPlanSchema, LetGoPlanSchema,
   RelevanceSchema,
   type Critique,
-  type RawGoalPlan
+  type RawGoalPlan,
+  type RawLetGoPlan
 } from './goalPlanSchema'
 
 export interface Prompt {
@@ -48,6 +49,8 @@ export const EXCERPT_CHARS = 700
 export interface AiClient {
   research(prompt: Prompt): Promise<string>
   finalize(prompt: Prompt): Promise<RawGoalPlan>
+  /** Like `finalize`, for a plan to let a habit go. */
+  finalizeLetGo(prompt: Prompt): Promise<RawLetGoPlan>
   critique(prompt: Prompt): Promise<Critique>
   fetchPage(url: string): Promise<FetchedPage>
   judgeRelevance(pages: PageToJudge[], topic: string): Promise<boolean[]>
@@ -171,6 +174,24 @@ export function anthropicClient(opts: { apiKey: string; model?: string }): AiCli
         if (!res.parsed_output) {
           throw new AiError('The drafted plan did not match the expected shape.', 'malformed')
         }
+        return res.parsed_output
+      } catch (err) {
+        throw translate(err)
+      }
+    },
+
+    async finalizeLetGo(prompt) {
+      try {
+        const res = await client.messages.parse({
+          model,
+          max_tokens: 8000,
+          system: prompt.system,
+          messages: [{ role: 'user', content: prompt.user }],
+          output_config: { format: zodOutputFormat(LetGoPlanSchema) }
+        })
+        if (res.stop_reason === 'refusal') throw new AiError('The AI provider declined to draft this plan.', 'refusal')
+        if (res.stop_reason === 'max_tokens') throw new AiError('The drafted plan was cut off before it finished.', 'malformed')
+        if (!res.parsed_output) throw new AiError('The drafted plan did not match the expected shape.', 'malformed')
         return res.parsed_output
       } catch (err) {
         throw translate(err)

@@ -154,7 +154,7 @@ export function SyncDetailsPanel({
         ['Next sync', status.nextSyncAt ? `${clock(status.nextSyncAt)} · ${countdown(status.nextSyncAt)}` : '—', 'var(--accent)'],
         ['Interval', `Every ${status.intervalMinutes} minutes`],
         ['Task list', status.tasklistName ?? '—'],
-        ['Created ahead', `${status.horizonDays} days`]
+        ['Planned ahead', `${status.horizonDays} days`]
       ]
 
   return (

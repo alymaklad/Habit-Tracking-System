@@ -5,6 +5,8 @@ import {
   type AiProvider,
   type AppSettings,
   type GoalDraftInput,
+  type LetGoPlan,
+  type LetGoPlanInput,
   type GoalPlan,
   type GoalObstacle,
   type GoalResource,
@@ -229,6 +231,12 @@ export function registerIpc(
     ctx.goals.draftPlan(input, (progress) => push(PUSH_CHANNELS.goalProgress, progress))
   )
   mutate('goals:commit', (input: GoalDraftInput, plan: GoalPlan) => ctx.goals.commit(input, plan))
+
+  // Planning how to let a habit go: same progress feed as the goal planner.
+  handle('letGoPlan:draft', (input: LetGoPlanInput) =>
+    ctx.letGoPlans.draft(input, (progress) => push(PUSH_CHANNELS.goalProgress, progress))
+  )
+  mutate('letGoPlan:save', (input: LetGoPlanInput, plan: LetGoPlan) => ctx.letGoPlans.save(input, plan))
   mutate('goals:close', (id: number, outcome: 'achieved' | 'abandoned') => ctx.goals.close(id, outcome))
   mutate('goals:reopen', (id: number) => ctx.goals.reopen(id))
   handle('goals:draft', () => ctx.goals.draft())

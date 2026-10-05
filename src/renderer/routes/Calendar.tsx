@@ -246,7 +246,7 @@ export default function CalendarRoute() {
           <div className="flex items-end gap-3 flex-wrap">
             <h1 className="t-hero !text-[40px] !leading-[46px] m-0 text-[var(--laurel-deep)]">{view === 'week' ? weekTitle(start) : monthYear(selected)}</h1>
             <Stamp tone="ochre" className="mb-1.5">
-              {view === 'week' ? `Week ${weekIndex} folio` : 'Month overview'}
+              {view === 'week' ? `Week ${weekIndex}` : 'Month overview'}
             </Stamp>
           </div>
           <span className="t-italic !text-[14px]">Saturday to Friday · drag a step to another day to move it · tick past days to record them honestly</span>
@@ -283,7 +283,7 @@ export default function CalendarRoute() {
             <Droplet size={20} />
           </span>
           <span className="flex flex-col">
-            <span className="t-stamp !text-[10.5px] text-ink-4">Rhythm cadence</span>
+            <span className="t-stamp !text-[10.5px] text-ink-4">How often</span>
             <span className="text-[22px] font-semibold text-[var(--ochre-deep)] t-num">
               {scheduled ? `${Math.round((completed / scheduled) * 100)}%` : '—'} <span className="text-[13px] font-normal text-ink-3">completed in sync</span>
             </span>
@@ -316,7 +316,7 @@ export default function CalendarRoute() {
           <section className="kh-card p-5 min-w-0">
             <div className="flex items-center justify-between mb-4 px-1">
               <span className="t-stamp text-ink-2 flex items-center gap-2">
-                <Dot /> Seven rhythms strip
+                <Dot /> The week at a glance
               </span>
               <span className="t-italic !text-[13px] flex items-center gap-1.5">
                 <GripVertical size={13} /> Drag open steps between days

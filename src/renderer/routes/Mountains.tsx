@@ -3,7 +3,7 @@ import { ArrowRight, Compass, Flag, Mountain, Plus, Save } from 'lucide-react'
 import type { GoalView, PerformanceView } from '@shared/types'
 import emblem from '../assets/emblem-large.png'
 import { useData } from '../hooks/useData'
-import { currentMilestone, dayMonth, daysBetween, goalProgress, monthYear, plural, roman, today } from '../lib/khatwa'
+import { currentMilestone, dayMonth, daysBetween, goalProgress, monthYear, plural, today } from '../lib/khatwa'
 import { TrailMap, type TrailObstacle, type Waypoint } from '../khatwa/charts'
 import { useShell } from '../khatwa/nav'
 import { Page } from '../khatwa/Page'
@@ -43,14 +43,14 @@ function Primary({ goal, perf, index }: { goal: GoalView; perf: PerformanceView 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-2 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <Stamp tone="laurel">Primary ascent vector</Stamp>
-              <span className="text-[13px] text-ink-4">Ascent map № {String(index + 1).padStart(2, '0')}</span>
+              <Stamp tone="laurel">Main mountain</Stamp>
+              <span className="text-[13px] text-ink-4">Mountain {index + 1}</span>
             </div>
             <h2 className="t-hero !text-[44px] !leading-[52px] m-0 [text-wrap:balance]">{goal.title}</h2>
             {goal.description ? <p className="font-serif text-[17px] leading-[27px] text-ink-2 m-0 max-w-[620px] [text-wrap:pretty]">“{goal.description}”</p> : null}
           </div>
           <div className="kh-card px-4 py-3 flex flex-col gap-2 min-w-[190px]">
-            <span className="t-stamp !text-[10.5px] text-ink-4">Waypoints</span>
+            <span className="t-stamp !text-[10.5px] text-ink-4">Milestones</span>
             <span className="text-[14px]">
               {goal.milestonesDone} cleared · {goal.milestonesTotal - goal.milestonesDone} ahead
             </span>
@@ -73,7 +73,7 @@ function Primary({ goal, perf, index }: { goal: GoalView; perf: PerformanceView 
             compact={goal.milestones.length > 6}
           />
         ) : (
-          <div className="kh-empty">This mountain has no waypoints yet. Open the trail detail to add milestones.</div>
+          <div className="kh-empty">This mountain has no milestones yet. Open it to add some.</div>
         )}
       </section>
 
@@ -91,13 +91,13 @@ function Primary({ goal, perf, index }: { goal: GoalView; perf: PerformanceView 
           <h3 className="font-serif text-[26px] leading-[32px] m-0 [text-wrap:balance]">{goal.title}</h3>
           <hr className="kh-rule" />
           <div className="flex items-baseline justify-between">
-            <span className="text-[13px] text-ink-3">Ascent progress</span>
-            <span className="font-serif text-[22px] text-laurel t-num">{Math.round(progress * 100)}% ascended</span>
+            <span className="text-[13px] text-ink-3">Progress</span>
+            <span className="font-serif text-[22px] text-laurel t-num">{Math.round(progress * 100)}% done</span>
           </div>
           <Bar value={progress} />
           <div className="grid grid-cols-2 gap-3 t-caption !text-[12.5px]">
             <span>{plural(onMountain, 'day')} on the mountain</span>
-            <span className="text-right">{goal.daysToTarget === null ? 'Open horizon' : goal.daysToTarget >= 0 ? `${plural(goal.daysToTarget, 'day')} to target` : `${plural(-goal.daysToTarget, 'day')} past target`}</span>
+            <span className="text-right">{goal.daysToTarget === null ? 'No end date' : goal.daysToTarget >= 0 ? `${plural(goal.daysToTarget, 'day')} to target` : `${plural(-goal.daysToTarget, 'day')} past target`}</span>
           </div>
 
           <div className="kh-card p-4 flex flex-col gap-2">
@@ -114,7 +114,7 @@ function Primary({ goal, perf, index }: { goal: GoalView; perf: PerformanceView 
                 ) : null}
               </>
             ) : (
-              <span className="text-[14px] text-ink-3">Every waypoint is cleared. Mark the summit when you stand on it.</span>
+              <span className="text-[14px] text-ink-3">Every milestone is reached. Mark the goal reached when you get there.</span>
             )}
           </div>
 
@@ -163,7 +163,7 @@ export default function Mountains() {
   }, [])
 
   if (error) return <Page><LoadError message={error} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Unrolling the survey maps…" /></Page>
+  if (!data) return <Page><Loading label="Loading your mountains…" /></Page>
 
   const active = data.goals.filter((g) => g.status === 'active')
   const closed = data.goals.filter((g) => g.status !== 'active')
@@ -173,15 +173,9 @@ export default function Mountains() {
   return (
     <Page>
       <header className="flex flex-wrap items-center gap-x-8 gap-y-4 mb-9">
-        <Stamp tone="ochre" className="!py-2 !px-4">
-          <Compass size={14} /> Survey series · Vol. {roman(Math.max(1, data.goals.length))}
-        </Stamp>
         <div className="flex items-end gap-4">
           <h1 className="t-hero m-0">The Mountains</h1>
           <span className="t-italic pb-1.5">Where am I going?</span>
-        </div>
-        <div className="flex items-center gap-2 text-[13px] text-ink-3">
-          <Dot tone="laurel" /> Active survey: {plural(active.length, 'horizon')}
         </div>
         <div className="ml-auto">
           <Btn kind="ochre" onClick={() => navigate({ name: 'expedition' })}>
@@ -197,7 +191,7 @@ export default function Mountains() {
             <span className="font-serif text-[20px] leading-7">{data.draft.title || 'An unnamed mountain'}</span>
             <span className="text-[13.5px] text-ink-3">
               Set aside on {dayMonth(data.draft.savedAt.slice(0, 10))}
-              {data.draft.plan ? ` with its trail drawn — ${plural(data.draft.plan.milestones.length, 'waypoint')}, ${plural(data.draft.plan.sessions.length, 'habit')}.` : ', before the trail was drawn.'}
+              {data.draft.plan ? ` with a plan: ${plural(data.draft.plan.milestones.length, 'milestone')}, ${plural(data.draft.plan.sessions.length, 'habit')}.` : ', before the trail was drawn.'}
             </span>
           </div>
           <Btn kind="laurel" onClick={() => navigate({ name: 'expedition', resume: true })}>
@@ -218,7 +212,7 @@ export default function Mountains() {
             <Eyebrow>No mountain yet</Eyebrow>
             <h2 className="t-h1 m-0">Every journey begins with a step.</h2>
             <p className="t-italic m-0 [text-wrap:pretty]">
-              Name what you want to become. The AI cartographer researches the path, drafts milestones and daily rhythms around the habits you already keep, and hands you the map to edit before anything is set.
+              Name a big goal. The AI planner looks into it, suggests milestones and habits that fit around the ones you already have, and lets you change everything before it is saved.
             </p>
             <Btn kind="ochre" size="lg" onClick={() => navigate({ name: 'expedition' })}>
               Choose your first mountain <ArrowRight size={16} />
@@ -229,7 +223,7 @@ export default function Mountains() {
 
       {others.length > 0 ? (
         <section className="mt-12">
-          <h2 className="t-h2 mb-4">Other horizons in view</h2>
+          <h2 className="t-h2 mb-4">Your other mountains</h2>
           <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
             {others.map((g) => (
               <button key={g.id} className="kh-card p-5 text-left flex flex-col gap-3 hover:border-[var(--rule)]" onClick={() => setPicked(g.id)}>
@@ -242,7 +236,7 @@ export default function Mountains() {
                 <span className="font-serif text-[20px] leading-7 [text-wrap:balance]">{g.title}</span>
                 <Bar value={goalProgress(g)} thin />
                 <span className="t-caption">
-                  {g.milestonesDone} of {g.milestonesTotal} waypoints · {plural(g.habits.filter((h) => h.active).length, 'habit')}
+                  {g.milestonesDone} of {g.milestonesTotal} milestones · {plural(g.habits.filter((h) => h.active).length, 'habit')}
                 </span>
               </button>
             ))}
@@ -257,10 +251,10 @@ export default function Mountains() {
             <span className="absolute -right-1.5 -bottom-1.5 w-5 h-5 rounded-full bg-[var(--laurel-deep)] text-[var(--on-solid)] text-[11px] grid place-items-center">{active.length}</span>
           </span>
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-[var(--ochre-deep)]">The law of limited ridges</span>
+            <span className="t-stamp text-[var(--ochre-deep)]">Keep it to a few</span>
             <span className="text-[14.5px] text-ink-2 [text-wrap:pretty]">
-              A meaningful life has room for three or four true summits at once. You are climbing {plural(active.length, 'mountain')}
-              {active.length > 4 ? ' — consider setting one aside so the others get your best hours.' : '.'}
+              Most people can work on three or four big goals at once. You are climbing {plural(active.length, 'mountain')}
+              {active.length > 4 ? '. Think about pausing one, so the others get your best time.' : '.'}
             </span>
           </div>
         </section>

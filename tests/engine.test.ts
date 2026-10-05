@@ -458,3 +458,37 @@ describe('live timer figures', () => {
     expect(card.closedMinutes).toBe(40)
   })
 })
+
+describe('progress view', () => {
+  it('stops its charts at the current week, though next week is already scheduled', () => {
+    const habit = h.habits.create(draft())
+    // Two past weeks of finished work, then the horizon reaching into next week.
+    for (let d = -14; d <= 0; d++) {
+      const day = new Date(NOW.getTime() + d * 86_400_000)
+      h.schedule.expandHorizon(day)
+    }
+    for (const occ of h.occurrences.listInRange('2026-08-06', '2026-08-19')) {
+      h.logs.addManual(habit.id, occ.id, 120, `${occ.date}T18:00:00.000Z`)
+      h.occurrences.setStatus(occ.id, 'complete', `${occ.date}T20:00:00.000Z`)
+    }
+    h.engine.rebuildAll(NOW)
+
+    const views = viewService({
+      habits: h.habits,
+      occurrences: h.occurrences,
+      logs: h.logs,
+      records: h.records,
+      settings: h.settings,
+      todos: h.todos,
+      engine: h.engine,
+      runningOccurrenceId: () => null
+    })
+    const thisWeek = '2026-08-15' // weeks run Saturday to Friday
+    const weeks = h.records.weeklyAll(20).map((w) => w.weekStart)
+    expect(weeks.some((w) => w > thisWeek)).toBe(true) // next week has a record already
+
+    const series = views.progress(8, NOW).hoursPerWeek
+    expect(series.at(-1)!.label).toBe(thisWeek.slice(8))
+    expect(series.at(-1)!.value).toBeGreaterThan(0)
+  })
+})

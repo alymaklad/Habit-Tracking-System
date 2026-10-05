@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Backpack, Flame, Mountain, Moon, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from 'lucide-react'
+import { Backpack, Flame, Mountain, Moon, Pencil, Plus, RotateCcw, Sparkles, Trash2, TriangleAlert } from 'lucide-react'
 import type { GoalView, GuideInsight, LetGoView, Tool } from '@shared/types'
 import { useData } from '../hooks/useData'
 import { dayMonth, plural, today } from '../lib/khatwa'
 import { CheckInModal, CONTEXT_LABEL, FEELING_LABEL, GreenXMonth, GuideCard, LetGoForm, ToolsPanel, WEIGHT_LABEL, WEIGHT_TONE } from '../khatwa/letgo'
 import { useShell } from '../khatwa/nav'
 import { Page } from '../khatwa/Page'
-import { Alert, Bar, Btn, Dot, Eyebrow, IconBtn, LoadError, Loading, Modal, Stamp } from '../khatwa/ui'
+import { Alert, Bar, Btn, IconBtn, LoadError, Loading, Modal, Stamp } from '../khatwa/ui'
 
 type Data = { items: LetGoView[]; goals: GoalView[]; tools: Tool[]; guide: GuideInsight[] }
 
@@ -62,6 +62,7 @@ function PackCard({ item, selected, onSelect }: { item: LetGoView; selected: boo
 }
 
 export default function LetGo({ id, create }: { id?: number; create?: boolean }) {
+  const { navigate } = useShell()
   const [selected, setSelected] = useState<number | null>(id ?? null)
   const [editing, setEditing] = useState<LetGoView | 'new' | null>(create ? 'new' : null)
   const [checkDate, setCheckDate] = useState<string | null>(null)
@@ -86,7 +87,6 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
   const tracked = carrying.reduce((s, i) => s + i.stats.daysTracked, 0)
   const free = carrying.reduce((s, i) => s + i.stats.daysFree, 0)
   const ready = carrying.filter((i) => i.ceremonyReady).length
-  const lastCheck = data.items.flatMap((i) => i.checkins).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
   const mine = (key: string): boolean => current !== null && new RegExp(`^(letgo-feeling|letgo-alternative|ceremony):${current.id}(:|$)`).test(key)
   const insights = data.guide.filter((g) => mine(g.key) || !/^(letgo|ceremony)/.test(g.key))
 
@@ -103,9 +103,6 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
     <Page>
       <header className="flex flex-wrap items-end justify-between gap-6 mb-8">
         <div className="flex flex-col gap-3 max-w-[680px]">
-          <Eyebrow>
-            <Dot /> Folio VI · The pack &amp; the pass <span className="is-quiet">/ Inventory of weights &amp; shedding</span>
-          </Eyebrow>
           <h1 className="t-hero m-0">
             What are you ready to <em className="text-[var(--laurel-deep)]">leave behind?</em>
           </h1>
@@ -114,9 +111,11 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
-          {lastCheck ? <span className="t-caption">Last weigh-in: {dayMonth(lastCheck.date)}</span> : null}
           <Btn kind="laurel" onClick={() => setEditing('new')}>
             <Plus size={15} /> What else are you carrying?
+          </Btn>
+          <Btn kind="soft" onClick={() => navigate({ name: 'letgoPlan' })}>
+            <Sparkles size={15} /> Plan it with the planner
           </Btn>
         </div>
       </header>
@@ -128,9 +127,14 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
           <Backpack size={30} className="text-ink-4" />
           <span className="t-h2 text-ink">Some things are easier to carry once you decide to put them down.</span>
           <span className="max-w-[460px]">Name a behaviour that makes the climb harder. Each evening you mark whether you left it behind — a returned day is noted, never punished, and never resets what you have already done.</span>
-          <Btn kind="laurel" onClick={() => setEditing('new')}>
-            Add something to let go
-          </Btn>
+          <span className="flex flex-wrap justify-center gap-3">
+            <Btn kind="laurel" onClick={() => setEditing('new')}>
+              Add something to let go
+            </Btn>
+            <Btn kind="soft" onClick={() => navigate({ name: 'letgoPlan' })}>
+              <Sparkles size={15} /> Plan it with the planner
+            </Btn>
+          </span>
         </div>
       ) : (
         <>
@@ -143,11 +147,11 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
                 <span className="font-serif text-[26px] leading-8">{plural(carrying.length, 'behaviour')} carried</span>
                 <span className="text-[13px] text-ink-3">
                   {ready ? `${ready} ready to leave behind · ` : ''}
-                  {behind.length ? `${behind.length} already left at the cairn` : 'Nothing left at the cairn yet'}
+                  {behind.length ? `${behind.length} already left behind` : 'Nothing left behind yet'}
                 </span>
               </div>
               <div className="flex flex-col">
-                <span className="t-stamp !text-[10.5px] text-ink-4">Unburdened days</span>
+                <span className="t-stamp !text-[10.5px] text-ink-4">Days free</span>
                 <span className="font-serif text-[26px] leading-8 t-num">
                   {free} <span className="text-[14px] text-ink-4">/ {tracked} recorded</span>
                 </span>
@@ -174,7 +178,7 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
 
               {behind.length ? (
                 <div className="flex flex-col gap-3 mt-2">
-                  <span className="t-stamp text-ink-2">Left behind at the cairn</span>
+                  <span className="t-stamp text-ink-2">Left behind</span>
                   {behind.map((i) => (
                     <button key={i.id} className={`kh-docket px-4 py-3 text-left flex items-center gap-3 ${current?.id === i.id ? 'ring-1 ring-[var(--laurel)]' : ''}`} onClick={() => setSelected(i.id)}>
                       <span className="flex flex-col flex-1 min-w-0">
@@ -183,7 +187,7 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
                           Set down {i.leftBehindAt ? dayMonth(i.leftBehindAt.slice(0, 10)) : ''} · {i.stats.daysFree} free days kept
                         </span>
                       </span>
-                      <Stamp tone="laurel" className="!text-[10px]">At the cairn</Stamp>
+                      <Stamp tone="laurel" className="!text-[10px]">Left behind</Stamp>
                     </button>
                   ))}
                 </div>
@@ -199,7 +203,7 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
                 <section className="kh-card p-6 flex flex-col gap-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-col gap-1 min-w-0">
-                      <span className="t-stamp !text-[10.5px] text-ink-4">Freedom ledger</span>
+                      <span className="t-stamp !text-[10.5px] text-ink-4">Your record</span>
                       <h2 className="t-h2 m-0">{current.title}</h2>
                       <span className="t-caption">
                         Tracking since {dayMonth(current.startedOn)} · {plural(current.stats.daysCarried, 'day')} on the trail
@@ -220,7 +224,7 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
                     <Moon size={18} className="text-ink-3" />
                     <span className="flex flex-col flex-1 min-w-[200px]">
                       <span className="text-[15px] font-semibold">
-                        {current.today ? (current.today.resisted ? 'Today is stamped: left behind' : 'Today is noted: it returned') : 'Evening check-in awaits'}
+                        {current.today ? (current.today.resisted ? 'Today: you stayed free of it' : 'Today: it came back') : 'Check in this evening'}
                       </span>
                       <span className="t-caption">
                         {current.today ? 'You can change today’s answer any time before midnight.' : 'A single question, and an optional reflection if it returned.'}
@@ -233,7 +237,7 @@ export default function LetGo({ id, create }: { id?: number; create?: boolean })
                   {current.status === 'left_behind' ? (
                     <div className="kh-alert is-laurel !items-center">
                       <RotateCcw size={16} className="shrink-0" />
-                      <span className="flex-1">Left at the cairn. You can keep recording days — and if it comes back, you noticed it, and you can continue.</span>
+                      <span className="flex-1">Left behind. You can keep recording days. If it comes back, noticing it is a step, and you can keep going.</span>
                       <Btn size="sm" kind="soft" onClick={() => void run(() => window.api.letGo.pickUpAgain(current.id))}>
                         It came back — carry it again
                       </Btn>

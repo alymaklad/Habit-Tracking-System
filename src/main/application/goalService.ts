@@ -202,7 +202,7 @@ export function goalService(deps: {
           obstacles: patch.obstacles.map((o) => {
             const title = o.title?.trim()
             if (!title) throw new Error('Name what stands in the way')
-            if (o.nearMilestoneId !== null && !milestoneIds.has(o.nearMilestoneId)) throw new Error('That waypoint is no longer on this mountain')
+            if (o.nearMilestoneId !== null && !milestoneIds.has(o.nearMilestoneId)) throw new Error('That milestone is no longer on this mountain')
             return { id: String(o.id), title, note: o.note?.trim() || null, nearMilestoneId: o.nearMilestoneId, passed: !!o.passed }
           })
         }

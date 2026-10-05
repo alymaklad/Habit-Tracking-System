@@ -38,40 +38,44 @@ in the environment instead.
 
 ### 3. Google sign-in
 
-The app signs people in with Google through their **system browser**, the same way it
-links Google Calendar, and hands Neon Auth the resulting Google **ID token**, which Neon
-verifies with Google. An ID token names the Google client it was issued to, so **Neon
-Auth's Google provider must use the app's own Desktop client** — the same client ID and
-secret as in `MAIN_VITE_GOOGLE_CLIENT_ID` / `MAIN_VITE_GOOGLE_CLIENT_SECRET`:
+Khatwa uses Neon's own Google sign-in, with the **system browser** in the role of a web
+page:
 
-```
-neonctl neon-auth oauth-provider add --provider-id google \
-  --oauth-client-id <Desktop client ID> --oauth-client-secret <Desktop client secret>
-```
+1. the app listens on a `http://localhost:<port>` address (Neon trusts any localhost
+   address out of the box);
+2. it asks Neon to start Google sign-in with that address as the place to come back to,
+   and opens Neon's link in the browser;
+3. Neon sends the browser back with a one-time `neon_auth_session_verifier`, and the app
+   exchanges it for the session — together with the "session challenge" cookie Neon set in
+   step 2, so a verifier is no use to anyone but the app that asked for it.
 
-(or Neon console → Auth → OAuth providers → Google → custom credentials).
+**Development:** nothing to configure. Neon signs people in with its own shared Google
+client.
 
-> Neon's own guide describes a *Web application* client, because it assumes a website
-> redirecting back to itself. Khatwa never uses that redirect; it only sends ID tokens.
-> This path is not described in Neon's docs, so test it on a non-production branch first.
+**Before launch:** give Neon a Google client of your own, so the consent screen shows
+Khatwa's name rather than Neon's. In Google Cloud create an OAuth client of type
+**Web application** (not Desktop — Google only lets a Desktop client return to loopback
+addresses), add the callback URL Neon shows as an authorised redirect URI, then in Neon:
+**Settings → Auth → OAuth providers → Google → ⋯ → Configure** and enter that Web client's
+ID and secret.
 
-In Google Cloud, the consent screen needs the `openid`, `email` and `profile` scopes —
-they are non-sensitive, so they add no verification work.
+The **Desktop** client in `.env` is a different thing: it is only for linking Google
+Calendar, and must not be entered in Neon.
 
 ### 4. Before real users arrive
 
 - **Email verification** — off by default in Neon Auth, and without it anyone can sign up
   with any address. Turn it on and set up an email provider.
-- **Trusted domains** — if sign-in fails with "The account service refused this app",
-  Neon is checking the request's origin. Add a domain you own (for example
+- **Trusted domains** — the app identifies itself as `http://localhost`, which Neon
+  trusts by default. If you ever remove that, add a domain you own (for example
   `https://app.khatwa.com`) to Neon Auth's trusted domains and build it in:
   `MAIN_VITE_NEON_AUTH_ORIGIN=https://app.khatwa.com`.
 
 ## How it works
 
 The account service runs in the main process, never in the window, and calls Neon Auth's
-REST API directly: `sign-up/email`, `sign-in/email`, `sign-in/social` (with the Google ID
-token), `get-session` and `sign-out`. Better Auth keeps sessions in a cookie; the app keeps
+REST API directly: `sign-up/email`, `sign-in/email`, `sign-in/social` (to start Google
+sign-in), `get-session` (also exchanging Google's verifier) and `sign-out`. Better Auth keeps sessions in a cookie; the app keeps
 that cookie itself, **encrypted with Windows DPAPI**, and the window only ever learns who is
 signed in. Offline, the last signed-in user stays signed in.
 

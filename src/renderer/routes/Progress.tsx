@@ -7,7 +7,7 @@ import { dayMonth, today } from '../lib/khatwa'
 import { InkLine } from '../khatwa/charts'
 import { useShell } from '../khatwa/nav'
 import { Page, PageHead } from '../khatwa/Page'
-import { Bar, Dot, IconBtn, LoadError, Loading, Ring, Stamp } from '../khatwa/ui'
+import { Bar, IconBtn, LoadError, Loading, Ring, Stamp } from '../khatwa/ui'
 
 function Trend({ title, series, format, note }: { title: string; series: { label: string; value: number }[]; format: (v: number) => string; note?: string }) {
   const last = series[series.length - 1]?.value ?? 0
@@ -41,13 +41,13 @@ export default function Progress() {
   return (
     <Page>
       <PageHead
-        eyebrow={
-          <>
-            Progress <Dot /> <span className="is-quiet">Eight weeks of trends · the week’s league ledger</span>
-          </>
-        }
+        // eyebrow={
+        //   <>
+        //     Progress <Dot /> <span className="is-quiet">Eight weeks of trends · the week’s league ledger</span>
+        //   </>
+        // }
         title="Progress & Performance"
-        lede="Simple lines, honestly drawn. Assumed minutes — ticked in Google without a timer — are counted at target and badged where they appear."
+        // lede="Simple lines, honestly drawn. Assumed minutes — ticked in Google without a timer — are counted at target and badged where they appear."
       />
 
       <div className="grid gap-4 mb-10 grid-cols-[repeat(auto-fit,minmax(250px,1fr))]">
@@ -59,7 +59,7 @@ export default function Progress() {
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div className="flex flex-col gap-1">
-          <span className="t-stamp text-ink-3">League ledger</span>
+          <span className="t-stamp text-ink-3">Points this week</span>
           <h2 className="t-h1 !text-[28px] m-0">{perf.weekLabel}</h2>
         </div>
         <span className="flex items-center gap-2">

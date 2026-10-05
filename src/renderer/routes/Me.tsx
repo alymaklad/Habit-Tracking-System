@@ -3,7 +3,7 @@ import type { AchievementView, DashboardView, GoalView, JournalEntry, LetGoView,
 import { levelFloor, levelTitle } from '@shared/levels'
 import emblem from '../assets/emblem-large.png'
 import { useData } from '../hooks/useData'
-import { dayMonth, plural, roman, shortMonthYear } from '../lib/khatwa'
+import { dayMonth, plural, shortMonthYear } from '../lib/khatwa'
 import { InkLine } from '../khatwa/charts'
 import { useShell } from '../khatwa/nav'
 import { Page } from '../khatwa/Page'
@@ -45,7 +45,7 @@ export default function Me() {
   }, [])
 
   if (error) return <Page><LoadError message={error} onRetry={refetch} /></Page>
-  if (!data) return <Page><Loading label="Opening the dossier…" /></Page>
+  if (!data) return <Page><Loading label="Loading…" /></Page>
 
   const lvl = data.dash.level
   const name = settings?.displayName.trim() ?? ''
@@ -67,7 +67,7 @@ export default function Me() {
             <span>{name ? name.split(/\s+/)[0] : 'The climber'}</span>
             <span>Level {lvl.level}</span>
           </div>
-          <div className="text-center t-stamp !text-[10px] text-ink-3 mt-1">Persona archival</div>
+          <div className="text-center t-stamp !text-[10px] text-ink-3 mt-1">Your level</div>
         </div>
 
         <div className="flex flex-col gap-5 min-w-0">
@@ -76,7 +76,7 @@ export default function Me() {
               <Stamp tone="laurel-solid">
                 Lvl {lvl.level} · {lvl.title}
               </Stamp>
-              <span className="t-stamp text-[var(--ochre-deep)]">{lvl.currentXp.toLocaleString()} deliberate XP</span>
+              <span className="t-stamp text-[var(--ochre-deep)]">{lvl.currentXp.toLocaleString()} XP</span>
             </span>
             {(data.review?.streak ?? 0) > 0 ? (
               <span className="flex items-center gap-2 text-[13px] text-ink-3">
@@ -86,7 +86,7 @@ export default function Me() {
           </div>
           <h1 className="t-hero m-0">{name || 'Who am I becoming?'}</h1>
           <p className="t-italic !text-[17px] m-0 [text-wrap:pretty]">
-            {name ? `${lvl.title} — ${plural(lvl.xpToNext, 'point')} of XP from becoming ${levelTitle(lvl.level + 1)}.` : 'Give the folio your name in Settings, and this page becomes your dossier.'}
+            {name ? `${lvl.title} — ${plural(lvl.xpToNext, 'point')} of XP from becoming ${levelTitle(lvl.level + 1)}.` : 'Add your name in Settings to make this page yours.'}
           </p>
           <div className="kh-card px-6 py-5">
             <p className="font-serif italic text-[20px] leading-[31px] m-0 text-ink-2 [text-wrap:pretty]">Your character is not carved in stone; it is folded from the paper of daily practice.</p>
@@ -95,14 +95,14 @@ export default function Me() {
             <span className="flex items-center gap-3">
               <Flame size={18} className="text-[var(--ochre-deep)]" />
               <span className="flex flex-col">
-                <span className="text-[14px] font-semibold">Active vow of consistency</span>
+                <span className="text-[14px] font-semibold">Your streak</span>
                 <span className="t-caption">
-                  {(data.review?.streak ?? 0) > 0 ? `${plural(data.review!.streak, 'day')} of unbroken daily rhythm` : 'A new trail begins with the next kept step'} · {data.progress.totalHours} hours logged in all
+                  {(data.review?.streak ?? 0) > 0 ? `${plural(data.review!.streak, 'day')} in a row` : 'Your streak starts with the next habit you do'} · {data.progress.totalHours} hours logged in all
                 </span>
               </span>
             </span>
             <Btn kind="laurel" size="sm" onClick={() => navigate({ name: 'settings' })}>
-              <Pencil size={13} /> {name ? 'Amend name' : 'Add your name'}
+              <Pencil size={13} /> {name ? 'Change name' : 'Add your name'}
             </Btn>
           </div>
         </div>
@@ -111,10 +111,10 @@ export default function Me() {
       <section className="mb-12">
         <div className="flex items-end justify-between gap-4 mb-4">
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-[var(--ochre-deep)]">Maturation horizon</span>
-            <h2 className="t-h1 !text-[30px] m-0">The Evolutionary Arc</h2>
+            <span className="t-stamp text-[var(--ochre-deep)]">Levels</span>
+            <h2 className="t-h1 !text-[30px] m-0">How you grow</h2>
           </div>
-          <span className="t-italic !text-[13px]">Each tier is earned over weeks, not days</span>
+          <span className="t-italic !text-[13px]">Each level takes weeks, not days</span>
         </div>
         <div className="kh-sheet p-6 flex flex-col gap-7">
           <div className="grid gap-3 grid-cols-5">
@@ -152,12 +152,12 @@ export default function Me() {
       <section className="mb-12">
         <div className="flex items-end justify-between gap-4 mb-4">
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-[var(--ochre-deep)]">Permanent inscriptions</span>
-            <h2 className="t-h1 !text-[30px] m-0">The Ledger of High Marks</h2>
+            <span className="t-stamp text-[var(--ochre-deep)]">Records</span>
+            <h2 className="t-h1 !text-[30px] m-0">Your personal bests</h2>
           </div>
         </div>
         {data.records.length === 0 ? (
-          <div className="kh-empty">Records are inscribed as your weeks fill in.</div>
+          <div className="kh-empty">Your records appear as the weeks fill in.</div>
         ) : (
           <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(210px,1fr))]">
             {data.records.map((r, i) => {
@@ -171,7 +171,7 @@ export default function Me() {
                   <span className="t-stamp !text-[10.5px] text-ink-3 mt-2">{r.label}</span>
                   <span className="font-serif text-[30px] leading-9">{r.value}</span>
                   <span className="t-caption flex items-center gap-1.5 mt-auto">
-                    <Check size={12} /> Certified in folio{r.achievedOn ? ` · ${dayMonth(r.achievedOn)}` : ''}
+                    <Check size={12} /> Recorded{r.achievedOn ? ` · ${dayMonth(r.achievedOn)}` : ''}
                   </span>
                 </div>
               )
@@ -183,11 +183,11 @@ export default function Me() {
       <section className="mb-12">
         <div className="flex items-end justify-between gap-4 mb-4">
           <div className="flex flex-col gap-1">
-            <span className="t-stamp text-[var(--ochre-deep)]">Tactile markings</span>
-            <h2 className="t-h1 !text-[30px] m-0">Archival Seals &amp; Wax Stamps</h2>
+            <span className="t-stamp text-[var(--ochre-deep)]">Achievements</span>
+            <h2 className="t-h1 !text-[30px] m-0">Your achievements</h2>
           </div>
           <Btn kind="ghost" onClick={() => navigate({ name: 'achievements' })}>
-            All {data.achievements.length} seals · {unlocked.length} pressed
+            {unlocked.length} of {data.achievements.length} earned
           </Btn>
         </div>
         <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
@@ -199,7 +199,7 @@ export default function Me() {
               <span className="font-serif text-[18px] leading-6 [text-wrap:balance]">{a.name}</span>
               <span className="t-caption [text-wrap:pretty]">{a.description}</span>
               {a.unlockedAt ? (
-                <Stamp tone="ochre" className="!text-[10px]">Pressed · {dayMonth(a.unlockedAt.slice(0, 10))}</Stamp>
+                <Stamp tone="ochre" className="!text-[10px]">Earned · {dayMonth(a.unlockedAt.slice(0, 10))}</Stamp>
               ) : (
                 <div className="w-full flex flex-col gap-1">
                   <Bar value={a.progress} thin />
@@ -213,7 +213,7 @@ export default function Me() {
 
       <section className="mb-12">
         <div className="flex flex-col gap-1 mb-4">
-          <span className="t-stamp text-[var(--ochre-deep)]">Inner work</span>
+          <span className="t-stamp text-[var(--ochre-deep)]">Reflection</span>
           <h2 className="t-h1 !text-[30px] m-0">What I carry, what I learn</h2>
         </div>
         <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
@@ -229,7 +229,7 @@ export default function Me() {
             <span className="text-[17px] font-semibold">Let Go</span>
             <span className="t-caption !text-[13px]">
               {data.letGos.length
-                ? `${plural(data.letGos.filter((l) => l.status === 'carrying').length, 'thing')} carried · ${data.letGos.filter((l) => l.status === 'left_behind').length} left at the cairn`
+                ? `${plural(data.letGos.filter((l) => l.status === 'carrying').length, 'thing')} carried · ${data.letGos.filter((l) => l.status === 'left_behind').length} left behind`
                 : 'Nothing in the backpack. Add something to let go.'}
             </span>
           </button>
@@ -249,21 +249,21 @@ export default function Me() {
       </section>
 
       <section className="kh-card kh-tape p-8 flex flex-col gap-4">
-        <span className="t-stamp text-[var(--ochre-deep)]">Quarterly introspection folio · {roman(Math.ceil((new Date().getMonth() + 1) / 3))}</span>
-        <h2 className="t-h2 m-0">Where the practice is carrying you</h2>
+        <span className="t-stamp text-[var(--ochre-deep)]">Summary</span>
+        <h2 className="t-h2 m-0">Where your habits are taking you</h2>
         <p className="m-0 text-[16px] leading-[27px] text-ink-2 [text-wrap:pretty]">
           <span className="font-serif text-[40px] leading-none float-left mr-2 mt-1">{activeGoals.length ? 'Y' : 'T'}</span>
           {activeGoals.length
             ? `You are climbing ${plural(activeGoals.length, 'mountain')}: ${activeGoals.map((g) => g.title).join(', ')}. `
-            : 'There is no mountain in view yet — only the daily steps, which is where every summit begins. '}
+            : 'You don’t have a mountain yet. Your daily habits are where every big goal starts. '}
           {summits.length ? `You have already stood on ${plural(summits.length, 'summit')}. ` : ''}
-          Across your folio you have logged {data.progress.totalHours} hours of deliberate practice, and earned {unlocked.length} of {data.achievements.length} seals.
+          In total you have spent {data.progress.totalHours} hours on your habits, and earned {unlocked.length} of {data.achievements.length} achievements.
           {data.progress.improvementPercentage !== null
             ? ` This week’s hours ran ${data.progress.improvementPercentage >= 0 ? `${Math.round(data.progress.improvementPercentage)}% above` : `${Math.round(-data.progress.improvementPercentage)}% below`} the week before.`
             : ''}
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--rule)]">
-          <span className="t-caption italic">Recorded from the folio’s own ledger</span>
+          <span className="t-caption italic">Based on everything you have recorded</span>
           <span className="flex gap-3">
             <Btn kind="soft" size="sm" onClick={() => navigate({ name: 'review' })}>
               Weekly review

@@ -274,6 +274,8 @@ export interface AppSettings {
   defaultReminderLeadMinutes: number
   /** Points to aim for each week. 0 means no target has been set yet. */
   weeklyPointsTarget: number
+  /** The first-time tour has been finished or skipped. */
+  tourDone: boolean
   /** Which channels each notification kind may use. */
   channels: NotificationChannel[]
   /** Mirror occurrences into the app's own Google calendar for mobile reminders. */
@@ -580,6 +582,43 @@ export interface GoalPlanProgress {
   maxIterations: number
   /** Set while the provider is rate-limiting: when the next try goes out (epoch ms). */
   waitingUntil?: number | null
+}
+
+/** What the user tells the planner about a habit they want to stop. */
+export interface LetGoPlanInput {
+  /** The habit, in their words: "Late-night scrolling". */
+  title: string
+  /** When it happens, what it gives them, why they want to stop. */
+  description: string | null
+  /** Time per week they can give the replacement habits. */
+  weeklyMinutesBudget: number | null
+}
+
+/** Something that makes letting go easier: a change to their surroundings, or a plan for the urge. */
+export interface LetGoSupport {
+  title: string
+  description: string | null
+}
+
+/** The planner's suggestion for letting a habit go. Saving it creates the Let Go item, the replacement habits and the supports. */
+export interface LetGoPlan {
+  summary: string
+  triggerContexts: TriggerContext[]
+  /** When and why it tends to happen, in plain words. */
+  triggerNotes: string | null
+  /** What to do instead when the urge comes. */
+  replacement: string
+  weight: LetGoWeight
+  /** Replacement habits, scheduled like any other habit. */
+  sessions: GoalSession[]
+  supports: LetGoSupport[]
+}
+
+export interface LetGoDraftResult {
+  plan: LetGoPlan
+  iterations: number
+  warnings: string[]
+  notes: string[]
 }
 
 export interface GoalDraftResult {

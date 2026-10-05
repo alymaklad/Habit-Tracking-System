@@ -23,9 +23,11 @@ import Progress from './routes/Progress'
 import HabitDetail from './routes/HabitDetail'
 import LetGo from './routes/LetGo'
 import Ceremony from './routes/Ceremony'
+import LetGoPlanner from './routes/LetGoPlanner'
 import Journal from './routes/Journal'
 import ActiveSession from './khatwa/ActiveSession'
 import { AccountDialog, Welcome } from './khatwa/account'
+import Tour from './khatwa/Tour'
 import { Btn, Loading } from './khatwa/ui'
 import emblem from './assets/emblem.png'
 
@@ -41,6 +43,7 @@ export default function App() {
   const [account, setAccount] = useState<AccountStatus | null>(null)
   /** Trying the planner before creating an account. */
   const [guest, setGuest] = useState(false)
+  const [touring, setTouring] = useState(false)
   const [asking, setAsking] = useState<{ reason: string; detail?: string; startWith?: 'sign-in' | 'sign-up'; resolve: (ok: boolean) => void } | null>(null)
 
   const { data: dashboard } = useData(() => window.api.view.dashboard(), [])
@@ -126,6 +129,21 @@ export default function App() {
     setRoute({ name: 'today' })
   }, [])
 
+  // The first time someone reaches the app itself, show them around once.
+  const inApp = Boolean(account && (!account.configured || account.user))
+  useEffect(() => {
+    if (inApp && settings && !settings.tourDone) setTouring(true)
+  }, [inApp, settings])
+
+  const finishTour = useCallback(
+    (then?: Route) => {
+      setTouring(false)
+      void window.api.settings.save({ tourDone: true }).then(refetchSettings)
+      navigate(then ?? { name: 'today' })
+    },
+    [navigate, refetchSettings]
+  )
+
   const reconnect = useCallback(async () => {
     const result = await window.api.google.connect()
     if (!result.ok) pushToast({ kind: 'error', title: 'Could not connect to Google', body: result.error })
@@ -142,7 +160,8 @@ export default function App() {
       account: account?.user ?? null,
       accountsEnabled: account?.configured ?? false,
       requireAccount,
-      signOut
+      signOut,
+      startTour: () => setTouring(true)
     }),
     [navigate, settings, dashboard?.level, pushToast, account?.user, account?.configured, requireAccount, signOut]
   )
@@ -181,6 +200,8 @@ export default function App() {
         return <LetGo id={route.id} create={route.create} />
       case 'ceremony':
         return <Ceremony id={route.id} />
+      case 'letgoPlan':
+        return <LetGoPlanner />
       case 'journal':
         return <Journal prompt={route.prompt} goalId={route.goalId} letGoId={route.letGoId} kind={route.kind} />
       case 'settings':
@@ -270,7 +291,7 @@ export default function App() {
             </div>
             <button className="kh-search" onClick={() => setPaletteOpen(true)}>
               <Search size={15} />
-              <span>Search the folio…</span>
+              <span>Search…</span>
               <kbd>Ctrl K</kbd>
             </button>
             <span className="kh-header-date">
@@ -313,6 +334,7 @@ export default function App() {
 
         {paletteOpen ? <Palette onClose={() => setPaletteOpen(false)} onGo={navigate} /> : null}
         {accountDialog}
+        {touring ? <Tour onNavigate={navigate} onFinish={finishTour} /> : null}
 
         {toasts.length > 0 ? (
           <div className="kh-toasts" aria-live="polite">

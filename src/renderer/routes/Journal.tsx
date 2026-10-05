@@ -6,7 +6,7 @@ import { dayMonth, longDate, monthYear, plural, today } from '../lib/khatwa'
 import { FEELING_LABEL, GuideCard } from '../khatwa/letgo'
 import { AttachmentTray, DocSlip, Lightbox, Polaroid } from '../khatwa/attachments'
 import { Page } from '../khatwa/Page'
-import { Alert, Btn, Dot, Eyebrow, IconBtn, LoadError, Loading, Modal, Stamp } from '../khatwa/ui'
+import { Alert, Btn, Dot, IconBtn, LoadError, Loading, Modal, Stamp } from '../khatwa/ui'
 
 type Data = { entries: JournalEntry[]; letGos: LetGoView[]; goals: GoalView[]; guide: GuideInsight[] }
 type Mode = 'free' | 'daily' | 'deep'
@@ -221,7 +221,7 @@ function Composer({
             </Btn>
           ) : null}
           <Btn kind="ochre" disabled={busy} onClick={() => void save()}>
-            <Feather size={15} /> {editingId ? 'Save changes' : 'Seal entry'}
+            <Feather size={15} /> {editingId ? 'Save changes' : 'Save entry'}
           </Btn>
         </span>
       </div>
@@ -390,7 +390,7 @@ export default function Journal({ prompt, goalId, letGoId, kind }: { prompt?: st
   }
   const active = data.goals.find((g) => g.status === 'active')
   const streams: [Stream, string][] = [
-    ['all', 'All folios'],
+    ['all', 'All entries'],
     ['daily', 'Daily check-ins'],
     ['deep', 'Deep reflections'],
     ['mountain', 'Mountain check-ins'],
@@ -406,9 +406,6 @@ export default function Journal({ prompt, goalId, letGoId, kind }: { prompt?: st
     <Page>
       <header className="flex flex-wrap items-end justify-between gap-6 mb-6">
         <div className="flex flex-col gap-3 max-w-[720px]">
-          <Eyebrow>
-            <Dot /> The inner compass · archival field journal
-          </Eyebrow>
           <h1 className="t-hero m-0">Journal</h1>
           <p className="font-serif text-[17px] leading-[27px] text-ink-2 m-0">A quiet space to understand what you carry, what you learn, and who you are becoming.</p>
         </div>
@@ -435,7 +432,7 @@ export default function Journal({ prompt, goalId, letGoId, kind }: { prompt?: st
       <div className="grid gap-6 min-[1250px]:grid-cols-[210px_minmax(0,1fr)_280px] min-[1000px]:grid-cols-[210px_minmax(0,1fr)]">
         <aside className="flex flex-col gap-5 min-w-0">
           <div className="kh-sheet p-4 flex flex-col gap-2">
-            <span className="t-stamp !text-[10.5px] text-ink-3">Search folios</span>
+            <span className="t-stamp !text-[10.5px] text-ink-3">Search entries</span>
             <div className="relative">
               <Search size={14} className="absolute left-0 top-1/2 -translate-y-1/2 text-ink-4" />
               <input className="kh-input !pl-6 !text-[14px]" value={query} placeholder="Insights, friction…" onChange={(e) => setQuery(e.target.value)} />
@@ -464,7 +461,7 @@ export default function Journal({ prompt, goalId, letGoId, kind }: { prompt?: st
           ) : null}
           {months.length ? (
             <div className="kh-sheet p-4 flex flex-col gap-1">
-              <span className="t-stamp !text-[10.5px] text-ink-3 pb-1">Archival cadence</span>
+              <span className="t-stamp !text-[10.5px] text-ink-3 pb-1">By month</span>
               {months.map((m) => (
                 <button key={m} className={`flex justify-between text-left text-[14px] py-1 ${month === m ? 'text-laurel font-semibold' : ''}`} onClick={() => setMonth(month === m ? null : m)}>
                   <span>{monthYear(`${m}-15`)}</span>

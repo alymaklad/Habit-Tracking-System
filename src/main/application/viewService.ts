@@ -170,7 +170,13 @@ export function viewService(deps: {
   // ------------------------------------------------------------- progress
 
   function progress(weeks = 8, now: Date = new Date()): ProgressView {
-    const all = records.weeklyAll(weeks)
+    // The schedule is planned ahead, so next week already has a record — an empty one.
+    // The charts stop at the current week.
+    const thisWeek = weekStart(today(now))
+    const all = records
+      .weeklyAll(weeks + 6)
+      .filter((w) => w.weekStart <= thisWeek)
+      .slice(-weeks)
     // Chart x-axis ticks: a bare day-of-month is enough space-wise; the card's
     // headline above each chart already carries the broader context.
     const label = (ws: LocalDate) => ws.slice(8)
