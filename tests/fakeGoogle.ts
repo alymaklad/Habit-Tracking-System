@@ -1,4 +1,4 @@
-import type { GoogleTask, GoogleTaskList, TasksClient } from '@main/google/tasksClient'
+import type { GoogleTask, GoogleTaskList, TasksClient } from '@server/google/tasksClient'
 
 /**
  * An in-memory stand-in for Google Tasks.

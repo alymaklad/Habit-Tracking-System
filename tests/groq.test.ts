@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { AiError } from '@main/ai/anthropicClient'
-import { GoalPlanSchema } from '@main/ai/goalPlanSchema'
+import { AiError } from '@server/ai/anthropicClient'
+import { GoalPlanSchema } from '@server/ai/goalPlanSchema'
 import {
   GROQ_DEFAULT_MODEL,
   GROQ_PLAN_MODELS,
@@ -8,7 +8,7 @@ import {
   GROQ_RESEARCH_MODEL,
   groqClient,
   toStrictSchema
-} from '@main/ai/groqClient'
+} from '@server/ai/groqClient'
 import { samplePlan } from './fakeAi'
 
 type Call = { url: string; body: Record<string, unknown> | null; headers: Record<string, string> }

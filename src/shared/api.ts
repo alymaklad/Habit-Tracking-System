@@ -44,9 +44,9 @@ import type {
 } from './types'
 
 /**
- * The complete surface the renderer may call. The preload bridge exposes exactly this
- * and nothing more — the renderer has no Node access, no database handle and never
- * sees an OAuth token.
+ * The complete surface the UI may call. In the browser it is implemented by
+ * `src/renderer/lib/webApi.ts`, which turns each call into a POST to `/api/rpc/<channel>`.
+ * The UI never holds a database handle and never sees an OAuth token.
  */
 export interface HabitApi {
   habits: {
@@ -122,14 +122,13 @@ export interface HabitApi {
   }
 
   attachments: {
-    /** Copies files in, unlinked until an entry is saved with their ids. null opens a file picker. */
-    import(paths: string[] | null): Promise<Attachment[]>
+    /** Uploads files, unlinked until an entry is saved with their ids. null opens a file picker. */
+    import(files: File[] | null): Promise<Attachment[]>
     /** Removes a file not yet saved on an entry. */
     discard(id: number): Promise<void>
     setCaption(id: number, caption: string | null): Promise<void>
-    /** Opens a document in its default application. */
-    open(id: number): Promise<void>
-    pathForFile(file: File): string
+    /** Opens a file in a new tab. */
+    open(attachment: Attachment): Promise<void>
   }
 
   tools: {
@@ -199,9 +198,13 @@ export interface HabitApi {
   app: {
     openExternal(url: string): Promise<void>
     version(): Promise<string>
+    /** Once per page load: settles the time zone and brings the schedule up to today. */
+    start(): Promise<void>
+    /** The open app's heartbeat: delivers due reminders and syncs when the interval has passed. */
+    tick(): Promise<{ sync: SyncStatus; nextReminderAt: string | null }>
   }
 
-  /** Main-process pushes. Each returns an unsubscribe function. */
+  /** Events the server streams back while a call runs. Each returns an unsubscribe function. */
   on: {
     syncStatus(cb: (status: SyncStatus) => void): () => void
     dataChanged(cb: () => void): () => void

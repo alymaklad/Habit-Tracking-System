@@ -1,6 +1,6 @@
 # Khatwa — what it does
 
-A Windows desktop app that turns daily habits into a measurable progression system.
+A web app that turns daily habits into a measurable progression system.
 A checklist tells you whether you ticked a box; this tells you whether you are getting
 better — and, when you don't yet know *what* to practise, it helps you build the plan.
 
@@ -130,8 +130,7 @@ most hours in a week, most points in a week, most productive day.
 ### Settings
 
 Google account, AI planner provider and key, sync interval, notification channels and
-types, theme (dark, light, system), reduced motion, start with Windows, minimise to
-tray, every scoring value, and a *recompute all statistics* button that rebuilds every
+types, theme (dark, light, system), reduced motion, every scoring value, and a *recompute all statistics* button that rebuilds every
 derived number from the source rows.
 
 ---
@@ -186,17 +185,17 @@ delivered late in a burst.
 
 ## System
 
-Runs in the tray with today's progress in the tooltip; minimise-to-tray; optional launch
-at startup; a desktop shortcut (`npm run shortcut`); dark and light themes.
+Runs in any modern browser with an account per person; reminders as browser
+notifications while a tab is open, on the phone through the calendar mirror or push
+relay otherwise; dark and light themes.
 
 ---
 
 ## Commands
 
 ```bash
-npm run dev         # run from source
-npm run build       # production build
-npm run dist        # Windows installer
-npm run verify      # typecheck + tests + smoke checks
-npm run shortcut    # desktop shortcut
+npm run dev             # app + API on http://localhost:5173
+npm run build           # the Vercel deployment output
+npm run verify          # typecheck + lint + tests + build
+npm run import:desktop  # move the old Windows app's data into an account
 ```

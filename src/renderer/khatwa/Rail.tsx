@@ -67,7 +67,7 @@ function NavButton({ item, index, active, onClick }: { item: Item; index?: numbe
 function SyncLine({ status, onOpen }: { status: SyncStatus | null; onOpen: () => void }) {
   useTick(30_000)
   let icon: ReactNode = <CloudOff size={14} />
-  let text = 'Not synced: saved on this computer'
+  let text = 'Not linked to Google: saved to your account'
   let tone = 'text-ink-3'
   if (status) {
     if (status.state === 'needs_reauth') {

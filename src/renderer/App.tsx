@@ -30,6 +30,7 @@ import { AccountDialog, Welcome } from './khatwa/account'
 import Tour from './khatwa/Tour'
 import { Btn, Loading } from './khatwa/ui'
 import emblem from './assets/emblem.png'
+import { SIGNED_OUT_EVENT } from './lib/webApi'
 
 type Toast = ToastMessage & { id: number }
 
@@ -55,11 +56,9 @@ export default function App() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5200)
   }, [])
 
-  // The main process owns sync state and pushes it; the renderer never polls Google.
-  useEffect(() => {
-    void window.api.google.status().then(setStatus)
-    return window.api.on.syncStatus(setStatus)
-  }, [])
+  // The server owns sync state; it arrives with the heartbeat below and with any call
+  // that changes it. The browser never talks to Google itself.
+  useEffect(() => window.api.on.syncStatus(setStatus), [])
 
   useEffect(() => window.api.on.toast(pushToast), [pushToast])
 
@@ -69,6 +68,26 @@ export default function App() {
       .then(setAccount)
       .catch(() => setAccount({ configured: true, user: null, offline: true }))
   }, [])
+
+  // The server says the session is gone (expired, or signed out elsewhere).
+  useEffect(() => {
+    const onSignedOut = (): void => setAccount((a) => (a?.configured && a.user ? { ...a, user: null } : a))
+    window.addEventListener(SIGNED_OUT_EVENT, onSignedOut)
+    return () => window.removeEventListener(SIGNED_OUT_EVENT, onSignedOut)
+  }, [])
+
+  // Coming back from a Google redirect: say how it went, then tidy the address bar.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const google = q.get('google')
+    const signin = q.get('signin')
+    if (!google && !signin) return
+    const detail = q.get('message') ?? undefined
+    if (google === 'connected') pushToast({ kind: 'success', title: 'Google is linked', body: 'Your habits now sync with Google Tasks and Calendar.' })
+    if (google === 'error') pushToast({ kind: 'error', title: 'Could not connect to Google', body: detail })
+    if (signin === 'error') pushToast({ kind: 'error', title: 'Google sign-in did not finish', body: detail })
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [pushToast])
 
   // Theme is a document-level attribute so the token blocks switch wholesale.
   useEffect(() => {
@@ -131,6 +150,28 @@ export default function App() {
 
   // The first time someone reaches the app itself, show them around once.
   const inApp = Boolean(account && (!account.configured || account.user))
+
+  // Once in: bring the schedule up to today, then keep a light heartbeat that delivers
+  // due reminders and syncs with Google on the user's interval. This is what the desktop
+  // app's background timers did; a closed tab is covered by the daily server sweep.
+  useEffect(() => {
+    if (!inApp) return
+    let stopped = false
+    const tick = (): void => {
+      if (!stopped && document.visibilityState === 'visible') void window.api.app.tick().catch(() => undefined)
+    }
+    void window.api.app
+      .start()
+      .catch((err: unknown) => pushToast({ kind: 'error', title: 'Something went wrong starting up', body: err instanceof Error ? err.message : String(err) }))
+      .finally(tick)
+    const timer = setInterval(tick, 60_000)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [inApp, pushToast])
   useEffect(() => {
     if (inApp && settings && !settings.tourDone) setTouring(true)
   }, [inApp, settings])

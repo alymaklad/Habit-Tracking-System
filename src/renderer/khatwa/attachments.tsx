@@ -10,10 +10,10 @@ export function fileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/** Dropped files only carry a path once they cross the preload bridge. */
+/** Files dropped on the composer are uploaded straight away, unlinked until it is saved. */
 export async function importDropped(e: DragEvent): Promise<Attachment[]> {
-  const paths = [...e.dataTransfer.files].map((f) => window.api.attachments.pathForFile(f)).filter(Boolean)
-  return paths.length ? window.api.attachments.import(paths) : []
+  const files = [...e.dataTransfer.files]
+  return files.length ? window.api.attachments.import(files) : []
 }
 
 /** A photograph, taped down. Tilt is fixed per photo so the wall does not reshuffle. */
@@ -52,7 +52,7 @@ export function DocSlip({ att, onRemove }: { att: Attachment; onRemove?: () => v
   return (
     <div className="kh-slip flex items-center gap-3 pl-3 pr-2 py-2.5 min-w-0">
       <FileText size={18} className="text-[var(--slate)] shrink-0" />
-      <button type="button" className="flex flex-col min-w-0 text-left flex-1" title="Open in its own app" onClick={() => window.api.attachments.open(att.id).catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))}>
+      <button type="button" className="flex flex-col min-w-0 text-left flex-1" title="Open in a new tab" onClick={() => window.api.attachments.open(att).catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))}>
         <span className="text-[13.5px] truncate">{att.originalName}</span>
         <span className="t-caption">{error ?? `${(att.originalName.split('.').pop() ?? '').toUpperCase()} · ${fileSize(att.size)}`}</span>
       </button>

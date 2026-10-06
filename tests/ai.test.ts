@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { GoalDraftInput } from '@shared/types'
-import { GoalPlanSchema, normalisePlan, PlanShapeError } from '@main/ai/goalPlanSchema'
+import { GoalPlanSchema, normalisePlan, PlanShapeError } from '@server/ai/goalPlanSchema'
 import {
   describeConflict,
   findInternalConflicts,
   findScheduleConflicts,
   weeklyMinutes
-} from '@main/ai/scheduleConflicts'
-import { critiquePrompt, finalizePrompt, researchPrompt } from '@main/ai/promptBuilder'
-import { intervenor } from '@main/ai/intervenor'
-import { anthropicGoalPlanner, MAX_FINDINGS_CHARS } from '@main/ai/goalPlanner'
-import { AiError } from '@main/ai/anthropicClient'
-import type { PlanningContext } from '@main/ai/types'
+} from '@server/ai/scheduleConflicts'
+import { critiquePrompt, finalizePrompt, researchPrompt } from '@server/ai/promptBuilder'
+import { intervenor } from '@server/ai/intervenor'
+import { anthropicGoalPlanner, MAX_FINDINGS_CHARS } from '@server/ai/goalPlanner'
+import { AiError } from '@server/ai/anthropicClient'
+import type { PlanningContext } from '@server/ai/types'
 import { FakeAi, samplePlan } from './fakeAi'
 
 const input: GoalDraftInput = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountService, type SessionStore } from '@main/account/accountService'
+import { accountService, mergeCookies } from '@server/account/accountService'
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: unknown }
 
@@ -40,9 +40,9 @@ function fakeNeonAuth() {
         return json(200, { user: { id: u.id, email: u.email, name: u.name } }, `__Secure-neonauth.session_token=${session}; Path=/; HttpOnly`)
       }
       case '/auth/sign-in/social': {
-        // Neon's redirect flow: remember where to send the browser back, and set the
+        // Neon's redirect flow: note where to send the browser back, and set the
         // challenge cookie the verifier exchange will require.
-        if (body.provider !== 'google' || !String(body.callbackURL).startsWith('http://localhost:')) return json(400, { code: 'INVALID_CALLBACKURL' })
+        if (body.provider !== 'google' || !String(body.callbackURL).startsWith('https://khatwa.example/')) return json(400, { code: 'INVALID_CALLBACKURL' })
         googleCallback = body.callbackURL
         return json(200, { url: 'https://auth.example/auth/sign-in/social/init?token=t1', redirect: true }, '__Secure-neon-auth.session_challenge=ch1; Path=/; HttpOnly; Secure')
       }
@@ -62,54 +62,31 @@ function fakeNeonAuth() {
   return { calls, impl: impl as unknown as typeof fetch, goDown: () => void (down = true), googleCallback: () => googleCallback }
 }
 
-function memoryStore(): SessionStore & { value: string | null } {
-  return {
-    value: null,
-    load() {
-      return this.value
-    },
-    save(v) {
-      this.value = v
-    }
-  }
-}
+const ORIGIN = 'https://khatwa.example'
 
-const make = (opts: { origin?: string } = {}) => {
+const make = () => {
   const neon = fakeNeonAuth()
-  const store = memoryStore()
-  const opened: string[] = []
-  const account = accountService({
-    authUrl: 'https://auth.example/',
-    origin: opts.origin ?? null,
-    store,
-    // Stands in for the system browser: Google and Neon do their part, then Neon sends the
-    // browser back to the app's localhost listener with the one-time verifier.
-    openExternal: async (url: string) => {
-      opened.push(url)
-      void fetch(`${neon.googleCallback()}?neon_auth_session_verifier=v1`)
-    },
-    fetchImpl: neon.impl
-  })
-  return { neon, store, account, opened }
+  const account = accountService({ authUrl: 'https://auth.example/', origin: ORIGIN, fetchImpl: neon.impl })
+  return { neon, account }
 }
 
 describe('accountService', () => {
-  it('reports "not configured" without an auth URL, instead of failing', async () => {
-    const account = accountService({ authUrl: null, store: memoryStore(), openExternal: () => undefined })
-    expect(await account.status()).toEqual({ configured: false, user: null, offline: false })
+  it('refuses plainly without an auth URL', async () => {
+    const account = accountService({ authUrl: null, origin: ORIGIN })
+    expect(account.configured()).toBe(false)
     await expect(account.signIn('a@b.c', 'x')).rejects.toMatchObject({ kind: 'not_configured' })
   })
 
-  it('finds the endpoints under /auth, signs up, and keeps the session for the next request', async () => {
-    const { neon, store, account } = make()
-    const user = await account.signUp(' Aly ', 'aly@example.com', 'correct horse')
+  it('finds the endpoints under /auth, signs up, and hands back the session jar', async () => {
+    const { neon, account } = make()
+    const { user, jar } = await account.signUp(' Aly ', 'aly@example.com', 'correct horse')
     expect(user).toEqual({ id: 'u1', email: 'aly@example.com', name: 'Aly', image: null })
     expect(neon.calls.find((c) => c.url.endsWith('/auth/sign-up/email'))!.body).toEqual({ name: 'Aly', email: 'aly@example.com', password: 'correct horse' })
-    expect(store.value).toBe('__Secure-neonauth.session_token=s-u1')
+    expect(jar).toBe('__Secure-neonauth.session_token=s-u1')
 
-    const status = await account.status()
-    expect(status.user?.email).toBe('aly@example.com')
-    expect(neon.calls.at(-1)!.headers.cookie).toBe('__Secure-neonauth.session_token=s-u1')
+    const session = await account.session(jar)
+    expect(session?.user.email).toBe('aly@example.com')
+    expect(neon.calls.at(-1)!.headers.cookie).toBe(jar)
   })
 
   it('says plainly when the email is taken or the password is wrong', async () => {
@@ -119,61 +96,61 @@ describe('accountService', () => {
     await expect(account.signIn('aly@example.com', 'wrong')).rejects.toThrow('do not match an account')
   })
 
-  it('signs in with Google through the browser, exchanging the verifier with the challenge cookie', async () => {
-    const { neon, store, account, opened } = make()
-    const user = await account.signInWithGoogle()
-    expect(user).toMatchObject({ email: 'aly@gmail.com', image: 'https://x/y.png' })
-    expect(opened).toEqual(['https://auth.example/auth/sign-in/social/init?token=t1'])
-    const start = neon.calls.find((c) => c.url.endsWith('/auth/sign-in/social'))!
-    expect(start.body).toMatchObject({ provider: 'google', callbackURL: expect.stringMatching(/^http:\/\/localhost:\d+\/done$/) })
-    expect(start.headers.origin).toBe(new URL(neon.googleCallback()!).origin)
-    expect(store.value).toContain('__Secure-neonauth.session_token=s-google')
+  it('signs in with Google: the start keeps the challenge cookie, the verifier needs it', async () => {
+    const { neon, account } = make()
+    const start = await account.startGoogle(`${ORIGIN}/api/auth/google/done`)
+    expect(start.url).toBe('https://auth.example/auth/sign-in/social/init?token=t1')
+    expect(start.jar).toContain('session_challenge=ch1')
+    expect(neon.calls.find((c) => c.url.endsWith('/auth/sign-in/social'))!.body).toMatchObject({ provider: 'google', callbackURL: `${ORIGIN}/api/auth/google/done` })
+
+    // Without the challenge cookie a stolen verifier is worthless.
+    await expect(account.finishGoogle('v1', null)).rejects.toThrow()
+    const done = await account.finishGoogle('v1', start.jar)
+    expect(done.user).toMatchObject({ email: 'aly@gmail.com', image: 'https://x/y.png' })
+    expect(done.jar).toContain('__Secure-neonauth.session_token=s-google')
   })
 
-  it('says so when the browser comes back without a verifier', async () => {
-    const neon = fakeNeonAuth()
-    const account = accountService({
-      authUrl: 'https://auth.example/',
-      store: memoryStore(),
-      openExternal: async () => void fetch(`${neon.googleCallback()}?error=access_denied`),
-      fetchImpl: neon.impl
-    })
-    await expect(account.signInWithGoogle()).rejects.toThrow('Google sign-in did not finish (access_denied)')
+  it('reports a signed-out jar as no session', async () => {
+    const { account } = make()
+    expect(await account.session('__Secure-neonauth.session_token=nope')).toBeNull()
   })
 
-  it('keeps the last known user while offline rather than locking them out', async () => {
+  it('reports an unreachable service as a network error', async () => {
+    const { neon, account } = make()
+    const { jar } = await account.signUp('Aly', 'aly@example.com', 'correct horse')
+    neon.goDown()
+    await expect(account.session(jar)).rejects.toMatchObject({ kind: 'network' })
+  })
+
+  it('signs out without failing when the service cannot be reached', async () => {
+    const { neon, account } = make()
+    const { jar } = await account.signUp('Aly', 'aly@example.com', 'correct horse')
+    neon.goDown()
+    await expect(account.signOut(jar)).resolves.toBeUndefined()
+  })
+
+  it('sends the app’s own origin, which must be a trusted domain in Neon Auth', async () => {
     const { neon, account } = make()
     await account.signUp('Aly', 'aly@example.com', 'correct horse')
-    await account.status()
-    neon.goDown()
-    expect(await account.status()).toMatchObject({ offline: true, user: { email: 'aly@example.com' } })
+    expect(neon.calls.every((c) => c.headers.origin === ORIGIN)).toBe(true)
+  })
+})
+
+describe('mergeCookies', () => {
+  const res = (...cookies: string[]): Response => {
+    const headers = new Headers()
+    for (const c of cookies) headers.append('set-cookie', c)
+    return new Response(null, { headers })
+  }
+
+  it('adds, replaces and expires cookies', () => {
+    let jar = mergeCookies(null, res('a=1; Path=/', 'b=2'))
+    expect(jar).toBe('a=1; b=2')
+    jar = mergeCookies(jar, res('a=3', 'b=; Max-Age=0'))
+    expect(jar).toBe('a=3')
   })
 
-  it('signs out locally even when the service cannot be reached', async () => {
-    const { neon, store, account } = make()
-    await account.signUp('Aly', 'aly@example.com', 'correct horse')
-    neon.goDown()
-    await account.signOut()
-    expect(store.value).toBeNull()
-    expect((await account.status()).user).toBeNull()
-  })
-
-  it('drops the session when the service clears its cookie', async () => {
-    const { store, account } = make()
-    await account.signUp('Aly', 'aly@example.com', 'correct horse')
-    await account.signOut()
-    expect(store.value).toBeNull()
-  })
-
-  it('sends a localhost Origin by default, which Neon trusts out of the box', async () => {
-    const { neon, account } = make()
-    await account.signUp('Aly', 'aly@example.com', 'correct horse')
-    expect(neon.calls.every((c) => c.headers.origin === 'http://localhost')).toBe(true)
-  })
-
-  it('sends the configured Origin header', async () => {
-    const { neon, account } = make({ origin: 'https://khatwa.app' })
-    await account.signUp('Aly', 'aly@example.com', 'correct horse')
-    expect(neon.calls.every((c) => c.headers.origin === 'https://khatwa.app')).toBe(true)
+  it('drops the session-data cache cookie so the app cookie stays small', () => {
+    expect(mergeCookies(null, res('x.session_token=t', 'x.session_data=' + 'z'.repeat(3000)))).toBe('x.session_token=t')
   })
 })

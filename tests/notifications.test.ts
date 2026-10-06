@@ -1,29 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import Database from 'better-sqlite3'
 import type { AppSettings, HabitDraft, NotificationChannel } from '@shared/types'
-import { migrate, type Db } from '@main/persistence/db'
-import { habitRepo } from '@main/persistence/habitRepo'
-import { occurrenceRepo } from '@main/persistence/occurrenceRepo'
-import { settingsRepo } from '@main/persistence/settingsRepo'
-import { scheduleService } from '@main/application/scheduleService'
-import { notificationService } from '@main/application/notificationService'
-import { reminderScheduler, GRACE_MS } from '@main/application/reminderScheduler'
-import { pushRelay } from '@main/platform/pushRelay'
+import { freshDb } from './pg'
+import { habitRepo } from '@server/persistence/habitRepo'
+import { occurrenceRepo } from '@server/persistence/occurrenceRepo'
+import { settingsRepo } from '@server/persistence/settingsRepo'
+import { scheduleService } from '@server/application/scheduleService'
+import { notificationService } from '@server/application/notificationService'
+import { reminderScheduler, GRACE_MS } from '@server/application/reminderScheduler'
+import { pushRelay } from '@server/platform/pushRelay'
 
 // Thursday 20 August 2026. German is scheduled at 20:00 Cairo with a 30-minute lead,
 // so its reminder is due at 19:30 Cairo = 16:30 UTC.
 const TODAY = '2026-08-20'
 const NOW_BEFORE = new Date('2026-08-20T12:00:00.000Z')
 
-function harness(overrides: Partial<AppSettings> = {}) {
-  const db = new Database(':memory:') as Db
-  db.pragma('foreign_keys = ON')
-  migrate(db)
+async function harness(overrides: Partial<AppSettings> = {}) {
+  const db = await freshDb()
 
   const habits = habitRepo(db)
   const occurrences = occurrenceRepo(db)
   const settings = settingsRepo(db)
-  settings.save({
+  await settings.save({
     timezone: 'Africa/Cairo',
     provisionHorizonDays: 7,
     defaultReminderLeadMinutes: 30,
@@ -35,12 +32,12 @@ function harness(overrides: Partial<AppSettings> = {}) {
   const toasts: { title: string; body: string }[] = []
   const pushed: { title: string; body: string }[] = []
 
-  const relay = pushRelay({ config: () => settings.all().push })
+  const relay = pushRelay({ config: async () => (await settings.all()).push })
   const notifications = notificationService({
     settings: () => settings.all(),
     push: {
       ...relay,
-      configured: () => settings.all().push.enabled,
+      configured: async () => (await settings.all()).push.enabled,
       send: async (m) => {
         pushed.push({ title: m.title, body: m.body })
         return true
@@ -71,11 +68,11 @@ const draft = (o: Partial<HabitDraft> = {}): HabitDraft => ({
   ...o
 })
 
-let h: ReturnType<typeof harness>
+let h: Awaited<ReturnType<typeof harness>>
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.useRealTimers()
-  h = harness()
+  h = await harness()
 })
 
 describe('notification channels', () => {
@@ -87,7 +84,7 @@ describe('notification channels', () => {
   })
 
   it('sends to both channels when push is configured', async () => {
-    h.settings.save({
+    await h.settings.save({
       channels: ['toast', 'push'],
       push: { enabled: true, server: 'https://ntfy.sh', topic: 'secret-topic' }
     })
@@ -100,7 +97,7 @@ describe('notification channels', () => {
   })
 
   it('sends nothing at all when notifications are switched off', async () => {
-    h.settings.save({ notificationsEnabled: false })
+    await h.settings.save({ notificationsEnabled: false })
     await h.notifications.streakAlive(6)
     await h.notifications.completed('German', 15)
     await h.notifications.weeklyReviewReady('Aug 22–28')
@@ -109,7 +106,7 @@ describe('notification channels', () => {
   })
 
   it('honours each kind’s own switch independently', async () => {
-    h.settings.save({ notifyStreak: false, notifyWeeklyReview: true })
+    await h.settings.save({ notifyStreak: false, notifyWeeklyReview: true })
 
     await h.notifications.streakAlive(6)
     expect(h.toasts).toHaveLength(0)
@@ -119,7 +116,7 @@ describe('notification channels', () => {
   })
 
   it('routes push-only when the user wants nothing on the desktop', async () => {
-    h.settings.save({
+    await h.settings.save({
       channels: ['push'] as NotificationChannel[],
       push: { enabled: true, server: 'https://ntfy.sh', topic: 't' }
     })
@@ -130,25 +127,25 @@ describe('notification channels', () => {
 })
 
 describe('push relay', () => {
-  it('reports itself unconfigured without a topic', () => {
+  it('reports itself unconfigured without a topic', async () => {
     const relay = pushRelay({
-      config: () => ({ enabled: true, server: 'https://ntfy.sh', topic: '   ' })
+      config: async () => ({ enabled: true, server: 'https://ntfy.sh', topic: '   ' })
     })
-    expect(relay.configured()).toBe(false)
+    expect(await relay.configured()).toBe(false)
   })
 
-  it('reports itself unconfigured when disabled', () => {
+  it('reports itself unconfigured when disabled', async () => {
     const relay = pushRelay({
-      config: () => ({ enabled: false, server: 'https://ntfy.sh', topic: 'abc' })
+      config: async () => ({ enabled: false, server: 'https://ntfy.sh', topic: 'abc' })
     })
-    expect(relay.configured()).toBe(false)
+    expect(await relay.configured()).toBe(false)
   })
 
-  it('rejects a server that is not http(s)', () => {
+  it('rejects a server that is not http(s)', async () => {
     const relay = pushRelay({
-      config: () => ({ enabled: true, server: 'ftp://nope', topic: 'abc' })
+      config: async () => ({ enabled: true, server: 'ftp://nope', topic: 'abc' })
     })
-    expect(relay.configured()).toBe(false)
+    expect(await relay.configured()).toBe(false)
   })
 
   it('posts the title as a header and the message as the body', async () => {
@@ -160,7 +157,7 @@ describe('push relay', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const relay = pushRelay({
-      config: () => ({ enabled: true, server: 'https://ntfy.sh/', topic: 'my topic' })
+      config: async () => ({ enabled: true, server: 'https://ntfy.sh/', topic: 'my topic' })
     })
     const ok = await relay.send({ title: 'Streak', body: '6 days', priority: 4, tags: ['fire'] })
 
@@ -178,7 +175,7 @@ describe('push relay', () => {
   it('never throws when the relay is unreachable', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ENOTFOUND') }))
     const relay = pushRelay({
-      config: () => ({ enabled: true, server: 'https://ntfy.sh', topic: 'abc' })
+      config: async () => ({ enabled: true, server: 'https://ntfy.sh', topic: 'abc' })
     })
     await expect(relay.send({ title: 'x', body: 'y' })).resolves.toBe(false)
     vi.unstubAllGlobals()
@@ -186,38 +183,38 @@ describe('push relay', () => {
 })
 
 describe('reminder scheduling', () => {
-  it('arms a timer for each upcoming occurrence', () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
+  it('knows which reminders are still to come, and when the next is due', async () => {
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
 
-    const armed = h.reminders.rearm(NOW_BEFORE)
-
-    expect(armed).toBeGreaterThan(0)
-    expect(h.reminders.pendingCount()).toBe(armed)
-    h.reminders.stop()
+    expect(await h.reminders.pendingCount(NOW_BEFORE)).toBeGreaterThan(0)
+    // 20:00 Cairo minus the default 30 minutes = 19:30 Cairo = 16:30 UTC.
+    expect(await h.reminders.nextDueAt(NOW_BEFORE)).toBe('2026-08-20T16:30:00.000Z')
   })
 
-  it('arms nothing when desktop reminders are switched off', () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    h.settings.save({ notifyUpcoming: false })
+  it('has nothing pending when upcoming reminders are switched off', async () => {
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    await h.settings.save({ notifyUpcoming: false })
 
-    expect(h.reminders.rearm(NOW_BEFORE)).toBe(0)
+    expect(await h.reminders.pendingCount(NOW_BEFORE)).toBe(0)
+    expect(await h.reminders.nextDueAt(NOW_BEFORE)).toBeNull()
   })
 
-  it('arms nothing when the toast channel is not in use', () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    // Mobile-only: the calendar mirror rings the phone, the desktop stays quiet.
-    h.settings.save({ channels: ['calendar'] })
+  it('shows nothing in the browser when the toast channel is not in use', async () => {
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    // Mobile-only: the calendar mirror rings the phone, the browser stays quiet.
+    await h.settings.save({ channels: ['calendar'] })
 
-    expect(h.reminders.rearm(NOW_BEFORE)).toBe(0)
+    await h.reminders.fireDue(new Date('2026-08-20T16:31:00.000Z'))
+    expect(h.toasts).toHaveLength(0)
   })
 
   it('fires the reminder with the habit’s own lead time', async () => {
-    h.habits.create(draft({ reminderLeadMinutes: 15 }))
-    h.schedule.expandHorizon(NOW_BEFORE)
-    const occ = h.occurrences.getByHabitDate(1, TODAY)!
+    await h.habits.create(draft({ reminderLeadMinutes: 15 }))
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    const occ = (await h.occurrences.getByHabitDate(1, TODAY))!
 
     // 20:00 Cairo minus 15 minutes = 19:45 Cairo = 16:45 UTC.
     await h.reminders.fireNow(occ.id, new Date('2026-08-20T16:45:00.000Z'))
@@ -228,21 +225,21 @@ describe('reminder scheduling', () => {
   })
 
   it('delivers at most once even if fired repeatedly', async () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    const occ = h.occurrences.getByHabitDate(1, TODAY)!
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    const occ = (await h.occurrences.getByHabitDate(1, TODAY))!
     const at = new Date('2026-08-20T16:30:00.000Z')
 
     for (let i = 0; i < 5; i++) await h.reminders.fireNow(occ.id, at)
 
     expect(h.toasts).toHaveLength(1)
-    expect(h.occurrences.get(occ.id)!.reminderSentAt).not.toBeNull()
+    expect((await h.occurrences.get(occ.id))!.reminderSentAt).not.toBeNull()
   })
 
   it('drops a reminder the machine slept through', async () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    const occ = h.occurrences.getByHabitDate(1, TODAY)!
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    const occ = (await h.occurrences.getByHabitDate(1, TODAY))!
 
     // Woke up well past the grace window.
     const late = new Date(new Date('2026-08-20T16:30:00.000Z').getTime() + GRACE_MS + 60_000)
@@ -250,13 +247,13 @@ describe('reminder scheduling', () => {
 
     expect(h.toasts).toHaveLength(0)
     // Marked as handled so it cannot resurface on the next re-arm.
-    expect(h.occurrences.get(occ.id)!.reminderSentAt).not.toBeNull()
+    expect((await h.occurrences.get(occ.id))!.reminderSentAt).not.toBeNull()
   })
 
   it('still fires inside the grace window', async () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    const occ = h.occurrences.getByHabitDate(1, TODAY)!
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    const occ = (await h.occurrences.getByHabitDate(1, TODAY))!
 
     const slightlyLate = new Date(new Date('2026-08-20T16:30:00.000Z').getTime() + 60_000)
     await h.reminders.fireNow(occ.id, slightlyLate)
@@ -265,46 +262,44 @@ describe('reminder scheduling', () => {
   })
 
   it('does not remind about an already completed habit', async () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    const occ = h.occurrences.getByHabitDate(1, TODAY)!
-    h.occurrences.setStatus(occ.id, 'complete', '2026-08-20T15:00:00.000Z')
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    const occ = (await h.occurrences.getByHabitDate(1, TODAY))!
+    await h.occurrences.setStatus(occ.id, 'complete', '2026-08-20T15:00:00.000Z')
 
     await h.reminders.fireNow(occ.id, new Date('2026-08-20T16:30:00.000Z'))
     expect(h.toasts).toHaveLength(0)
   })
 
   it('does not remind about a justified skip', async () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    const occ = h.occurrences.getByHabitDate(1, TODAY)!
-    h.occurrences.setJustifiedSkip(occ.id, true, 'Travelling')
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    const occ = (await h.occurrences.getByHabitDate(1, TODAY))!
+    await h.occurrences.setJustifiedSkip(occ.id, true, 'Travelling')
 
     await h.reminders.fireNow(occ.id, new Date('2026-08-20T16:30:00.000Z'))
     expect(h.toasts).toHaveLength(0)
   })
 
   it('does not remind about a paused habit', async () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
-    const occ = h.occurrences.getByHabitDate(1, TODAY)!
-    h.habits.setActive(1, false)
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
+    const occ = (await h.occurrences.getByHabitDate(1, TODAY))!
+    await h.habits.setActive(1, false)
 
     await h.reminders.fireNow(occ.id, new Date('2026-08-20T16:30:00.000Z'))
     expect(h.toasts).toHaveLength(0)
   })
 
-  it('rebuilds its timers from the database, so a restart loses nothing', () => {
-    h.habits.create(draft())
-    h.schedule.expandHorizon(NOW_BEFORE)
+  it('delivers what is due exactly once, however many callers come by', async () => {
+    await h.habits.create(draft())
+    await h.schedule.expandHorizon(NOW_BEFORE)
 
-    const first = h.reminders.rearm(NOW_BEFORE)
-    h.reminders.stop()
-    expect(h.reminders.pendingCount()).toBe(0)
-
-    // A fresh scheduler over the same database arms the same set.
-    const second = h.reminders.rearm(NOW_BEFORE)
-    expect(second).toBe(first)
-    h.reminders.stop()
+    // Nothing is due at noon; then two overlapping heartbeats just after 16:30 UTC.
+    expect(await h.reminders.fireDue(NOW_BEFORE)).toBe(0)
+    const at = new Date('2026-08-20T16:31:00.000Z')
+    expect(await h.reminders.fireDue(at)).toBe(1)
+    expect(await h.reminders.fireDue(at)).toBe(0)
+    expect(h.toasts).toHaveLength(1)
   })
 })

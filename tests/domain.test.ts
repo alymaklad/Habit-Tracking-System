@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SCORING, type ScoringConfig } from '@shared/types'
-import { countIn, describe as describeRec, expand, isValid, nextAfter, occursOn } from '@main/domain/recurrence'
+import { countIn, describe as describeRec, expand, isValid, nextAfter, occursOn } from '@server/domain/recurrence'
 import {
   completionRate,
   fullXp,
@@ -10,11 +10,11 @@ import {
   statusOf,
   weeklyBonus,
   type OccurrenceFacts
-} from '@main/domain/scoring'
-import { computeStreaks } from '@main/domain/streaks'
+} from '@server/domain/scoring'
+import { computeStreaks } from '@server/domain/streaks'
 import { levelForXp, levelInfo, levelTitle } from '@shared/levels'
-import { ladder, ladderStep, proposeAdjustment, targetForLevel } from '@main/domain/difficulty'
-import { ACHIEVEMENTS, earnedKeys, type AchievementStats } from '@main/domain/achievements'
+import { ladder, ladderStep, proposeAdjustment, targetForLevel } from '@server/domain/difficulty'
+import { ACHIEVEMENTS, earnedKeys, type AchievementStats } from '@server/domain/achievements'
 
 const cfg: ScoringConfig = DEFAULT_SCORING
 

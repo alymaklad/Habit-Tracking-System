@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { GoalDraftInput, GoalSession } from '@shared/types'
-import { anthropicGoalPlanner } from '@main/ai/goalPlanner'
-import { fitToBudget, keepTracedLinks, MIN_SESSION_MINUTES, normaliseUrl } from '@main/ai/planRepair'
-import { weeklyMinutes } from '@main/ai/scheduleConflicts'
-import type { PlanningContext } from '@main/ai/types'
+import { anthropicGoalPlanner } from '@server/ai/goalPlanner'
+import { fitToBudget, keepTracedLinks, MIN_SESSION_MINUTES, normaliseUrl } from '@server/ai/planRepair'
+import { weeklyMinutes } from '@server/ai/scheduleConflicts'
+import type { PlanningContext } from '@server/ai/types'
 import { FakeAi, samplePlan } from './fakeAi'
 
 const session = (name: string, days: number[], targetMinutes: number): GoalSession => ({

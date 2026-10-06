@@ -1,7 +1,7 @@
 # Connecting Google
 
-The app works fully without Google — habits, timer, scoring, streaks, charts and desktop
-reminders all run locally. Connecting Google adds two things: ticking a habit from your
+The app works fully without Google — habits, timer, scoring, streaks, charts and browser
+reminders all run without it. Connecting Google adds two things: ticking a habit from your
 phone, and reminders that reach your phone.
 
 You need your own Google Cloud project. It takes about ten minutes, once.
@@ -37,34 +37,35 @@ You need your own Google Cloud project. It takes about ten minutes, once.
 > unverified, which is fine for personal use — you will see a "Google hasn't verified this
 > app" screen on first connect. Click *Advanced → Go to (app name)*.
 
-## 3. Create a Desktop app client
+## 3. Create a Web application client
 
 *APIs & Services → Credentials → Create credentials → OAuth client ID*
 
-- Application type: **Desktop app**
+- Application type: **Web application** (a Desktop client cannot redirect to an `https`
+  site, so the desktop build's client will not work here).
+- **Authorised redirect URIs:** `https://<your-site>/api/google/callback` — add one per
+  domain you use, plus `http://localhost:5173/api/google/callback` for development.
 - Copy the **Client ID** and **Client secret**.
 
-## 4. Build them into the app
+## 4. Give them to the server
 
-These are the app's own credentials, set once by whoever builds Khatwa — users never see
-them. Copy `.env.example` to `.env` (git-ignored) and fill in:
+On Vercel: **Project → Settings → Environment Variables**
 
 ```
-MAIN_VITE_GOOGLE_CLIENT_ID=…apps.googleusercontent.com
-MAIN_VITE_GOOGLE_CLIENT_SECRET=…
+GOOGLE_CLIENT_ID=…apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=…
 ```
 
-then rebuild. Google does not treat a Desktop client's secret as confidential — it ships
-inside every installed copy, and PKCE protects the sign-in — so this is the intended way
-to distribute it. (Never do the same with an AI provider key: that one *is* a secret.)
+and redeploy. Locally, put the same two lines in `.env.local`. The secret stays on the
+server; the browser only ever sees Google's consent page.
 
 ## 5. Link
 
-Users open **Settings → Google Calendar** and click **Link Google Calendar**. Their
-browser opens Google's consent screen; they approve, and the tab tells them to come back.
+Users open **Settings → Google Calendar** and click **Link Google Calendar**. The page
+goes to Google's consent screen; they approve, and Google sends them straight back.
 
-The app never sees your Google password. Tokens are encrypted with Windows DPAPI and
-stored locally; they never cross into the app's UI process.
+The app never sees your Google password. Tokens are sealed (AES-256-GCM, keyed by the
+server's `APP_SECRET`) before they reach the database, and never reach the browser.
 
 ---
 
@@ -104,8 +105,9 @@ read back to decide whether a habit was done.
    completion you make elsewhere is detected within one poll interval — five minutes by
    default — not instantly.
 
-5. **The app must be running to sync.** It lives in the system tray and syncs in the
-   background; if the machine is off, changes are picked up next time it starts.
+5. **Sync runs while Khatwa is open, and once a day otherwise.** An open tab syncs on
+   your interval; a daily server job covers everyone else. (On Vercel Pro the cron can run
+   every few minutes — see docs/DEPLOY.md.)
 
 ---
 
@@ -135,12 +137,10 @@ Once connected:
    moves.
 5. Untick it. The points come back off — and any time you measured with the in-app timer
    is kept.
-6. Turn off your network mid-use. The app keeps working; changes queue and flush when the
-   connection returns.
 
 ---
 
 ## Disconnecting
 
 **Settings → Google Calendar → Unlink** revokes the token with Google and deletes the
-local copy. Your habit history is kept — erasing it is a separate, explicit action.
+stored copy. Your habit history is kept — erasing it is a separate, explicit action.

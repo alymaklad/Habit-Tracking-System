@@ -213,7 +213,7 @@ function Composer({
       </div>
 
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--rule)]">
-        <span className="t-caption">Stored only on this computer.</span>
+        <span className="t-caption">Private to your account.</span>
         <span className="flex gap-2">
           {editingId || draft.body || Object.keys(draft.prompts).length || attachments.length ? (
             <Btn kind="soft" onClick={onCancel}>

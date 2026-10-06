@@ -475,8 +475,17 @@ export default function Settings({
 
           <Label>Where they are delivered</Label>
 
-          <Row title="Windows toast" hint="Desktop only — cannot reach a phone">
-            <Toggle on={local.channels.includes('toast')} onChange={() => toggleChannel('toast')} />
+          <Row title="Browser notification" hint="While Khatwa is open in a tab — cannot reach a phone">
+            <Toggle
+              on={local.channels.includes('toast')}
+              onChange={() => {
+                // Asked here, from the click that turns them on, as browsers require.
+                if (!local.channels.includes('toast') && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                  void Notification.requestPermission()
+                }
+                toggleChannel('toast')
+              }}
+            />
           </Row>
 
           <Row
@@ -637,12 +646,6 @@ export default function Settings({
               onChange={(v) => void save({ theme: v })}
             />
           </div>
-          <Row title="Start with Windows">
-            <Toggle on={local.startWithWindows} onChange={(v) => void save({ startWithWindows: v })} />
-          </Row>
-          <Row title="Minimise to system tray" hint="Keeps background sync running when closed">
-            <Toggle on={local.minimiseToTray} onChange={(v) => void save({ minimiseToTray: v })} />
-          </Row>
           <Row title="Reduce animation">
             <Toggle on={local.reduceMotion} onChange={(v) => void save({ reduceMotion: v })} />
           </Row>

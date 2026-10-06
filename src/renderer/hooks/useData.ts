@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
- * Fetch-on-mount with a refetch that the main process can trigger.
+ * Fetch-on-mount with a refetch that the server can trigger.
  *
- * Every mutation over IPC ends with the main process broadcasting `dataChanged`, so
+ * Every mutation ends with the server streaming a `dataChanged` event, so
  * the UI re-reads rather than trying to mirror state locally. That keeps the database
  * the single source of truth, which is the same principle the engine follows.
  */

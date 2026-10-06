@@ -1,15 +1,18 @@
 # Khatwa
 
-A Windows desktop habit tracker that measures improvement rather than counting ticks —
-streaks, XP, adaptive difficulty and weekly deltas — synchronised with Google Tasks so a
-habit can be completed from any device.
+A habit tracker that measures improvement rather than counting ticks — streaks, XP,
+adaptive difficulty and weekly deltas — synchronised with Google Tasks so a habit can be
+completed from any device. It runs on the web: Vercel for the app and API, Neon Postgres
+for the data.
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:5173, data in a local Postgres under .data/
 ```
 
-The app works completely offline. Google and the AI planner are optional.
+Google and the AI planner are optional.
+
+**Deploying:** [docs/DEPLOY.md](docs/DEPLOY.md).
 
 **What it does, screen by screen:** [docs/FEATURES.md](docs/FEATURES.md).
 **The whole idea and a deep technical walkthrough:** [docs/PROJECT.md](docs/PROJECT.md).
@@ -48,17 +51,17 @@ Full detail, including every limitation: [docs/GOOGLE_SETUP.md](docs/GOOGLE_SETU
 ## Architecture
 
 ```
-┌─ renderer (React 19 + Vite) ──────── UI only, no Node access
-│      ↕ contextBridge IPC (fixed channel list)
-├─ preload ─────────────────────────── the renderer's entire capability surface
-└─ main (Node) ──────────────────────
+┌─ renderer (React 19 + Vite) ──────── static files on Vercel's CDN
+│      ↕ POST /api/rpc/<channel>  (fixed channel list, NDJSON stream back)
+└─ server (one Vercel function, Node) ─
+      http/         router, sessions, RPC table, uploads, OAuth callbacks, cron
       application/  HabitService, ScheduleService, ViewService,
                     RecomputeService, NotificationService, ReminderScheduler
       domain/       pure functions — recurrence, scoring, streaks, XP,
                     levels, difficulty, achievements   (no I/O, time injected)
       sync/         SyncOrchestrator → TaskProvisioner ⇄ TaskSyncer, EventMirror
-      google/       OAuth (loopback + PKCE), TasksClient, CalendarClient, token vault
-      persistence/  SQLite (better-sqlite3) + migrations + repositories
+      google/       OAuth (web + PKCE), TasksClient, CalendarClient, sealed token vault
+      persistence/  Neon Postgres, one schema per account + migrations + repositories
 ```
 
 Two rules hold the design together:
@@ -95,15 +98,15 @@ provenance.
 ## Verification
 
 ```bash
-npm run verify      # typecheck + tests + both smoke suites
+npm run verify      # typecheck + lint + tests + production build
 ```
 
 | Command | What it covers |
 |---|---|
 | `npm run typecheck` | Both projects, strict |
-| `npm test` | 289 unit and integration tests, headless |
-| `npm run smoke` | 21 end-to-end checks in the real Electron runtime |
-| `npm run smoke:ui` | Boots the actual window and asserts the UI mounted |
+| `npm run lint` | The server, for floating or misused promises |
+| `npm test` | Unit, integration and HTTP tests against an in-memory Postgres (PGlite) |
+| `npm run build` | The exact output Vercel deploys |
 
 The tests that matter most: five consecutive recomputes leave the database byte-identical;
 reverting a completion keeps measured timer minutes while dropping assumed credit; a
@@ -118,11 +121,10 @@ the local one; and a date-only Google `due` lands on the correct local day in bo
 
 **Built** — schedule engine, scoring, streaks, XP and levels, adaptive difficulty,
 achievements and personal records, Google Tasks sync (both directions), calendar reminder
-mirror, push relay, tray and background sync, all eight screens, light and dark themes.
+mirror, push relay, accounts, all eight screens, light and dark themes.
 
-**Not built** — friend groups, leaderboards and challenges (Phase 3; they need a hosted
-backend, and their screens say so rather than showing invented data), and the Chrome
-extension (Phase 4).
+**Not built** — friend groups, leaderboards and challenges (Phase 3; their screens say so
+rather than showing invented data), and the Chrome extension (Phase 4).
 
 Design canvas: the eight screens as artboards, with dark and light modes, live in a
 published Artifact — see `design/ui/` for the working files and `design/ui/build.mjs`,

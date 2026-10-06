@@ -1,7 +1,7 @@
 import type { GoalDraftInput, GoalPlan } from '@shared/types'
-import { AiError, type AiClient, type FetchedPage, type PageToJudge, type Prompt } from '@main/ai/anthropicClient'
-import type { Critique, RawGoalPlan, RawLetGoPlan } from '@main/ai/goalPlanSchema'
-import type { GoalPlanner, PlanningContext } from '@main/ai/types'
+import { AiError, type AiClient, type FetchedPage, type PageToJudge, type Prompt } from '@server/ai/anthropicClient'
+import type { Critique, RawGoalPlan, RawLetGoPlan } from '@server/ai/goalPlanSchema'
+import type { GoalPlanner, PlanningContext } from '@server/ai/types'
 
 /** A plan that passes every deterministic check against an empty calendar. */
 export function samplePlan(overrides: Partial<RawGoalPlan> = {}): RawGoalPlan {

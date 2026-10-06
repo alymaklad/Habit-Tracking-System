@@ -75,26 +75,29 @@ that calendar — only from Tasks.
 
 ## Part 2 — Process architecture
 
-Electron's three-process split is used exactly as intended, and the boundary is not
-just convention — `contextIsolation` is on and `nodeIntegration` is off, so it's an
-actual security boundary, not just a code-organization one.
+Khatwa runs on the web: a static React app on Vercel's CDN, and one Node function that
+serves every `/api/*` route. The browser holds no database handle and never sees an
+OAuth token; the only way in is a fixed list of RPC channels.
 
 ```
-┌─ renderer (React 19, Vite) ─────────────────────────── no Node access at all
-│    every action goes through window.api.*, a fixed object contextBridge exposes
-│         ↕ preload/index.ts — the ONLY bridge; wraps ipcRenderer.invoke, exposes
-│           nothing else. The renderer cannot construct a channel name and call it;
-│           it can only call functions on the object the preload chose to expose.
-└─ main (Node — everything privileged lives here)
-     ipc/         registers every channel explicitly, thin: validate → delegate → return
+┌─ browser (React 19, Vite) ──────────────────────────── static files
+│    every action goes through window.api.*  (src/renderer/lib/webApi.ts)
+│         ↕ POST /api/rpc/<channel>, JSON args → NDJSON stream back:
+│           events while it runs (progress, toasts, dataChanged), then one result
+└─ server (one Vercel function — everything privileged lives here)
+     http/        router, sealed session cookie, the RPC table, uploads, OAuth, cron
      application/ orchestrates persistence + domain into one coherent operation
      domain/      pure functions only — no I/O, no Date.now(), time is a parameter
      ai/          the Goals planner — Actor/Intervenor loop, provider adapters
      sync/        Google sync state machine
-     google/      OAuth (loopback + PKCE), thin HTTP clients for Tasks/Calendar
-     persistence/ SQLite + migrations + repositories (the only SQL in the app)
-     platform/    DPAPI token vault, push relay, logger
+     google/      OAuth (web + PKCE), thin HTTP clients for Tasks/Calendar
+     persistence/ Postgres + migrations + repositories (the only SQL in the app)
+     platform/    sealed secrets, private attachment store, push relay
 ```
+
+Each account's data lives in its own Postgres schema. A request opens one connection,
+points `search_path` at that schema, and closes it when the response is done — so no
+query names a user, and none can forget to.
 
 **The hard rule that makes testing possible:** `domain/` has zero imports from anywhere
 else in the app and zero I/O. `recurrence.ts`, `scoring.ts`, `time.ts`, `todo.ts`,
@@ -106,34 +109,34 @@ naively shifts the date for anyone west of UTC. That bug class doesn't get a cha
 appear because `parseGoogleDue` never calls `.toLocaleDateString()`— it treats the date
 portion as an opaque string and never promotes it to an instant.
 
-### The IPC surface
+### The RPC surface
 
 Every channel is a string literal registered once, in one file
-([ipc/index.ts](../src/main/ipc/index.ts)), grouped into namespaces that mirror the
-renderer's `window.api.*` shape:
+([http/rpc.ts](../src/server/http/rpc.ts)), grouped into namespaces that mirror the
+browser's `window.api.*` shape:
 
 ```
 habits · occurrence · timer · view · todo · proposal · goals · ai · settings · google · push · app
 ```
 
-Two thin wrappers do all the work:
+Two thin wrappers declare them:
 
 ```ts
-handle(channel, fn)   // read-only: validate args, call a service, return a value
-mutate(channel, fn)   // handle() + afterwards tells the renderer to refetch everything
+q(fn)   // read-only: call a service, return a value
+m(fn)   // q() + afterwards streams `dataChanged` so the browser refetches
 ```
 
 `mutate` exists because the renderer never tries to predict server state locally — no
 optimistic updates, no client-side mirroring of what the database "should" now say.
-Every mutation ends with a `dataChanged` broadcast and every screen's `useData` hook
+Every mutation ends with a `dataChanged` event and every screen's `useData` hook
 re-fetches. This is slower in theory and has never once caused a bug in practice,
-which is the trade a small local app should make.
+which is the trade a small app should make.
 
 ---
 
 ## Part 3 — The data model
 
-Seventeen tables, four migrations, append-only (a shipped migration is never edited —
+Seventeen tables per account schema, six migrations, append-only (a shipped migration is never edited —
 a fix is a new migration with a new id).
 
 | Table | What it holds |
@@ -145,7 +148,7 @@ a fix is a new migration with a new id).
 | `difficulty_proposal` | A pending/accepted/rejected suggestion to raise or lower a target |
 | `user_achievement` / `personal_record` | Unlocked badges and best-ever numbers |
 | `sync_state` / `sync_log` / `pending_op` | Google sync watermark, audit log, outbound queue |
-| `oauth_token` | DPAPI-encrypted refresh/access tokens — plaintext never touches disk |
+| `oauth_token` | Google tokens, sealed with AES-256-GCM under `APP_SECRET` — plaintext never reaches the database |
 | `todo` | Manual items and habit subtasks share one table (see below) |
 | `habit_subtask_template` | A habit's default steps, applied to each new occurrence |
 | `goal` | Title, target date, weekly budget, status, mind map + resources as JSON |
@@ -323,9 +326,9 @@ interface AiClient {
 }
 ```
 
-[anthropicClient.ts](../src/main/ai/anthropicClient.ts) implements this against Claude
+[anthropicClient.ts](../src/server/ai/anthropicClient.ts) implements this against Claude
 (native `web_search` / `web_fetch` server-side tools, `messages.parse()` for guaranteed
-schema-valid output). [groqClient.ts](../src/main/ai/groqClient.ts) implements the exact
+schema-valid output). [groqClient.ts](../src/server/ai/groqClient.ts) implements the exact
 same interface against Groq's OpenAI-compatible endpoint — which has none of those
 niceties, so the adapter absorbs the differences:
 
@@ -350,7 +353,7 @@ loop — they all depend on `AiClient`, and a `FakeAi` test double satisfies the
 interface with zero network calls, the same pattern the Google sync tests use
 (`FakeGoogle` standing in for the real Tasks API).
 
-[providers.ts](../src/main/ai/providers.ts) is the single place a provider is
+[providers.ts](../src/server/ai/providers.ts) is the single place a provider is
 registered — label, default model, key placeholder, factory function. Settings reads
 that registry to render the provider picker; adding a third provider is one new adapter
 file plus one entry there, nothing else.
@@ -368,9 +371,10 @@ spinner, because a feature that can silently take a minute needs to say so.
 
 | Piece | Choice | Why |
 |---|---|---|
-| Shell | Electron 43 | Windows desktop, full Node access in main, mature tray/notification APIs |
-| UI | React 19 + Vite (via `electron-vite`) | No exotic requirement; hand-rolled inline `<svg>` for every chart and the mind map rather than a charting library — the app's few dozen visualizations don't justify the dependency |
-| DB | `better-sqlite3` | Synchronous, in-process, zero server — correct choice for a single-user desktop app where a network round trip to your own disk would be absurd |
+| Hosting | Vercel (Build Output API) | Static app on the CDN plus one Node function; the build writes the output format itself, so nothing is left to framework detection |
+| UI | React 19 + Vite | No exotic requirement; hand-rolled inline `<svg>` for every chart and the mind map rather than a charting library — the app's few dozen visualizations don't justify the dependency |
+| DB | Neon Postgres (`@neondatabase/serverless`) | One schema per account for isolation by construction; tests run the same SQL on PGlite, an in-memory Postgres |
+| Accounts | Neon Auth | Email + password and Google, with the session kept server-side in a sealed cookie |
 | Validation | `zod` | Every untrusted payload is parsed against a schema before it touches the database — a Google API response, and now an LLM's JSON, are both "external input that might not be what it claims to be" |
 | Dates | `luxon` | IANA timezone-correct arithmetic; `date-fns`/native `Date` timezone handling is exactly the class of bug (see Part 2) this app cannot afford |
 | AI | `@anthropic-ai/sdk` (Anthropic path) + raw `fetch` (Groq path) | The SDK's `messages.parse()` + Zod output format is materially better than hand-rolling JSON extraction from a text response; Groq's OpenAI-compatible API needed no SDK, just careful error handling |
@@ -379,7 +383,7 @@ spinner, because a feature that can silently take a minute needs to say so.
 
 ## Part 8 — Testing philosophy
 
-308 tests, all headless, all offline. Nothing hits a real network — Google is
+All tests headless and offline, against an in-memory Postgres (PGlite). Nothing hits a real network — Google is
 substituted by [`FakeGoogle`](../tests/fakeGoogle.ts), an in-memory stand-in that
 reproduces the real API's actual constraints (server-assigned ids, date-only `due`,
 `updatedMin` filtering) rather than a mock that just returns canned data; the AI layer
@@ -404,5 +408,5 @@ The tests that matter most, because they'd be the hardest bugs to catch by hand:
   feedback surfaced rather than looping indefinitely.
 
 ```bash
-npm run verify   # typecheck + 308 tests + real-Electron smoke suites
+npm run verify   # typecheck + lint + tests + production build
 ```

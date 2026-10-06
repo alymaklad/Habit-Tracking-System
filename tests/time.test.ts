@@ -14,7 +14,7 @@ import {
   toLocalDate,
   weekStart,
   weekday
-} from '@main/domain/time'
+} from '@server/domain/time'
 
 describe('Google due dates are calendar dates, never instants', () => {
   // The regression this guards: Google returns `due` as midnight UTC. Converting it

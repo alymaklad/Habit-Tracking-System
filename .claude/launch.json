@@ -4,8 +4,21 @@
     {
       "name": "design-preview",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["design/serve.mjs"],
+      "runtimeArgs": [
+        "design/serve.mjs"
+      ],
       "port": 4178
+    },
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--import",
+        "tsx",
+        "scripts/dev.ts",
+        "--dev-user"
+      ],
+      "port": 5173
     }
   ]
 }

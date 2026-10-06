@@ -20,13 +20,14 @@
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@main/*": ["src/main/*"],
+      "@server/*": ["src/server/*"],
       "@shared/*": ["src/shared/*"]
     }
   },
   "include": [
-    "electron.vite.config.ts",
-    "src/main/**/*",
+    "scripts/**/*.ts",
+    "vite.config.ts",
+    "src/server/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
     "tests/**/*",

@@ -13,3 +13,7 @@ tsconfig.*.tsbuildinfo
 
 # Local safety copies of replaced code; the git tag legacy-ui-2026-09-25 holds the original UI.
 backup/
+
+# Web build and local data
+.vercel/
+.data/

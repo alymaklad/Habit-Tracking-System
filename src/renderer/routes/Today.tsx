@@ -611,9 +611,9 @@ export default function Today() {
             <BookOpen size={17} className="text-ink-3" />
             <span className="flex flex-col flex-1 min-w-0">
               <span className="text-[14px]">Your data</span>
-              <span className="t-caption">Saved on this computer, and works offline</span>
+              <span className="t-caption">Saved to your Khatwa account, on every device you sign in from</span>
             </span>
-            <span className="t-stamp !text-[10.5px] text-ink-4">Local</span>
+            <span className="t-stamp !text-[10.5px] text-ink-4">Synced</span>
           </div>
         </aside>
       </div>

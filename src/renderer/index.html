@@ -4,13 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
-      Locked-down CSP. The renderer never needs to reach the network: all data comes
-      over IPC, and both typefaces are bundled with the app, so it works fully offline.
+      Locked-down CSP. Everything comes from this origin: the API is same-origin, both
+      typefaces are bundled, and attachments are served by /api/files. The one outside
+      connection is the direct upload of journal files to private Vercel Blob storage.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: khatwa-file:; font-src 'self' data:; connect-src 'self'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.blob.vercel-storage.com https://vercel.com; base-uri 'self'; form-action 'self'"
     />
+    <meta name="theme-color" content="#FBF8F3" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <title>Khatwa</title>
   </head>
   <body>

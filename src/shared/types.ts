@@ -263,8 +263,6 @@ export interface AppSettings {
   theme: ThemeMode
   syncIntervalMinutes: number
   provisionHorizonDays: number
-  startWithWindows: boolean
-  minimiseToTray: boolean
   reduceMotion: boolean
   notificationsEnabled: boolean
   notifyUpcoming: boolean
@@ -888,13 +886,19 @@ export interface GuideInsight {
 
 // ---------------------------------------------------------------- IPC
 
-/** Channels the main process pushes to the renderer. */
-export const PUSH_CHANNELS = {
-  syncStatus: 'push:sync-status',
-  dashboard: 'push:dashboard',
-  toast: 'push:toast',
-  goalProgress: 'push:goal-progress'
-} as const
+/**
+ * What `/api/rpc/<channel>` streams back, one JSON object per line: any number of
+ * events while the call runs, then exactly one `result` or `error`.
+ */
+export type RpcEvent =
+  | { event: 'syncStatus'; data: SyncStatus }
+  | { event: 'toast'; data: ToastMessage }
+  | { event: 'goalProgress'; data: GoalPlanProgress }
+  /** A notification for the browser to show, if the user allowed them. */
+  | { event: 'notify'; data: { title: string; body: string } }
+  | { event: 'dataChanged' }
+
+export type RpcLine = RpcEvent | { result: unknown } | { error: { message: string; status: number } }
 
 export interface ToastMessage {
   kind: 'info' | 'success' | 'warn' | 'error'
